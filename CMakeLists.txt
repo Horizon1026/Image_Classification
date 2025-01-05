@@ -52,3 +52,23 @@ target_link_libraries( test_libtorch_cnn_mnist
     lib_stack_backward
     lib_mnist_cnn
 )
+
+# Create executable target to test_libtorch_resnet_mnist.
+set( IMAGE_CLASSIFICATION_PATH ${PROJECT_SOURCE_DIR}/../Image_Classification )
+if ( NOT TARGET lib_mnist_resnet )
+    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/single_label_classification/mnist_resnet ${PROJECT_SOURCE_DIR}/build/lib_mnist_resnet )
+endif()
+add_executable( test_libtorch_resnet_mnist
+    test/test_libtorch_resnet_mnist.cpp
+)
+target_link_libraries( test_libtorch_resnet_mnist
+    lib_slam_utility_basic_type
+    lib_slam_utility_log
+    lib_slam_utility_math
+    lib_slam_utility_memory
+    lib_slam_utility_operate
+    lib_slam_utility_tick_tock
+
+    lib_stack_backward
+    lib_mnist_resnet
+)
