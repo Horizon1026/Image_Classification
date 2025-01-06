@@ -2,6 +2,7 @@
 #define _MNIST_RESNET_H_
 
 #include "basic_type.h"
+#include "slam_log_reporter.h"
 #include "memory"
 #include "libtorch.h"
 
@@ -11,6 +12,8 @@ namespace NN_SLAM {
 class MnistResNet {
 
 public:
+    // Input size: patch_size x N x M x in_planes.
+    // Output size: patch_size x N x M x planes.
     struct ResNetBlock : torch::nn::Module {
         ResNetBlock(int32_t in_planes, int32_t planes, int32_t stride = 1) :
             conv1(torch::nn::Conv2dOptions(in_planes, planes, 3).stride(stride).padding(1).bias(false)),
@@ -65,17 +68,16 @@ public:
                 torch::nn::BatchNorm2d(64),
                 torch::nn::ReLU(),
                 // Parameters of MaxPool2d: kernel_size, stride, padding.
-                torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(2).stride(2))
+                // If stride is not specified, it is set to kernel_size.
+                torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2).padding(1))
             );
-            register_module("layer1", layer1);
-
             layer2 = make_layer(64, 64, 2, 1);
-            register_module("layer2", layer2);
-
             layer3 = make_layer(64, 128, 2, 2);
-            register_module("layer3", layer3);
-
             layer4 = make_layer(128, 256, 2, 2);
+
+            register_module("layer1", layer1);
+            register_module("layer2", layer2);
+            register_module("layer3", layer3);
             register_module("layer4", layer4);
             register_module("fc", fc);
         }
@@ -90,13 +92,23 @@ public:
         }
 
         torch::Tensor forward(torch::Tensor x) {
+            /*  x.sizes() = [64, 1, 28, 28]
+                after layer1: x.sizes() = [64, 64, 14, 14]
+                after layer2: x.sizes() = [64, 64, 14, 14]
+                after layer3: x.sizes() = [64, 128, 7, 7]
+                after layer4: x.sizes() = [64, 256, 4, 4]
+                after avg_pool2d: x.sizes() = [64, 256, 1, 1]
+                after view: x.sizes() = [64, 256]
+                after fc: x.sizes() = [64, 10]
+            */
             x = layer1->forward(x);
             x = layer2->forward(x);
             x = layer3->forward(x);
             x = layer4->forward(x);
-            x = torch::nn::functional::adaptive_avg_pool2d(x, {1, 1});
+            x = torch::avg_pool2d(x, 4);
             x = x.view({x.size(0), -1});
             x = fc->forward(x);
+            x = torch::log_softmax(x, 1);
             return x;
         }
 
@@ -116,7 +128,11 @@ public:
 
 private:
     std::shared_ptr<ResNet> model_ = std::make_shared<ResNet>(10);
-    std::string output_file_ = "../output/mnist_cnn.pt";
+    struct Options {
+        std::string output_file = "../output/mnist_resnet.pt";
+        int32_t max_epoch = 5;
+        int32_t batch_size = 64;
+    } options_;
 
 };
 

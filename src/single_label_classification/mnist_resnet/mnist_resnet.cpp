@@ -4,16 +4,15 @@
 namespace NN_SLAM {
 
 void MnistResNet::Train(const std::string &mnist_data_path) {
-    const int32_t batch_size = 64;
     auto data_loader = torch::data::make_data_loader(
         torch::data::datasets::MNIST(mnist_data_path.c_str()).map(
-            torch::data::transforms::Stack<>()), batch_size);
+            torch::data::transforms::Stack<>()), options_.batch_size);
 
     torch::Device device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU);
     model_->to(device);
     torch::optim::SGD optimizor(model_->parameters(), 0.01);
 
-    for (int32_t epoch = 0; epoch < 10; ++epoch) {
+    for (int32_t epoch = 0; epoch < options_.max_epoch; ++epoch) {
         int32_t batch_index = 0;
 
         for (auto &batch : *data_loader) {
@@ -33,19 +32,18 @@ void MnistResNet::Train(const std::string &mnist_data_path) {
             // Print the loss and check point.
             if (++batch_index % 100 == 0) {
                 ReportInfo("[Train] epoch [" << epoch << "], batch_idx [" << batch_index << "], loss [" << loss.item<float>() << "].");
-                torch::save(model_, output_file_.c_str());
+                torch::save(model_, options_.output_file.c_str());
             }
         }
     }
 }
 
 void MnistResNet::Test(const std::string &mnist_data_path) {
-    const int32_t batch_size = 64;
     auto dataset = torch::data::datasets::MNIST(mnist_data_path.c_str(),
         torch::data::datasets::MNIST::Mode::kTest).map(
             torch::data::transforms::Stack<>());
     const auto dataset_size = dataset.size().value();
-    auto data_loader = torch::data::make_data_loader(std::move(dataset), batch_size);
+    auto data_loader = torch::data::make_data_loader(std::move(dataset), options_.batch_size);
 
     torch::Device device(torch::cuda::is_available() ? torch::kCUDA : torch::kCPU);
     model_->to(device);

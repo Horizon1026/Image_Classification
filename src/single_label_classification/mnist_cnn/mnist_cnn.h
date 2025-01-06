@@ -29,10 +29,10 @@ public:
         }
 
         torch::Tensor forward(torch::Tensor x) {
-            // input : 1*28*28.
+            // input : 1 * 28 * 28.
             // conv1 : 28 - 5 + 1 = 24.
             x = torch::relu(conv1->forward(x));
-            // input : 24*24*2.
+            // input : 24 * 24 * 2.
             // conv2 : 24 - 3 + 1 = 22.
             // max_pool : 11 * 11 * 4 = 484.
             x = torch::max_pool2d(torch::relu(conv2->forward(x)), 2);
@@ -60,7 +60,11 @@ public:
 
 private:
     std::shared_ptr<Model> model_ = std::make_shared<Model>();
-    std::string output_file_ = "../output/mnist_cnn.pt";
+    struct Options {
+        std::string output_file = "../output/mnist_cnn.pt";
+        int32_t max_epoch = 5;
+        int32_t batch_size = 64;
+    } options_;
 
 };
 
