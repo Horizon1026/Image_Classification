@@ -10,7 +10,7 @@ int main(int argc, char **argv) {
     ReportColorInfo("torch::cuda::cudnn_is_available() = " << torch::cuda::cudnn_is_available());
     ReportColorInfo("torch::cuda::device_count() = " << torch::cuda::device_count());
 
-    NN_SLAM::MnistResNet solver;
+    NN_SLAM::MnistResNet solver(10, 12);
     solver.Train("/mnt/d/My_Github/Datasets/Mnist");
     solver.Test("/mnt/d/My_Github/Datasets/Mnist");
 

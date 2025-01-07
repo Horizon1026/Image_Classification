@@ -61,19 +61,20 @@ public:
     };
 
     struct ResNet : torch::nn::Module {
-        ResNet(int32_t num_classes = 10) : fc(256, num_classes) {
+        ResNet(int32_t num_classes = 10, int32_t init_channels = 8) :
+            fc(init_channels * 4, num_classes) {
             layer1 = torch::nn::Sequential(
-                torch::nn::Conv2d(torch::nn::Conv2dOptions(/*in_channels=*/1, /*out_channels=*/64, /*kernel_size=*/3)
+                torch::nn::Conv2d(torch::nn::Conv2dOptions(/*in_channels=*/1, /*out_channels=*/init_channels, /*kernel_size=*/3)
                     .stride(1).padding(1).bias(false)),
-                torch::nn::BatchNorm2d(64),
+                torch::nn::BatchNorm2d(init_channels),
                 torch::nn::ReLU(),
                 // Parameters of MaxPool2d: kernel_size, stride, padding.
                 // If stride is not specified, it is set to kernel_size.
                 torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2).padding(1))
             );
-            layer2 = make_layer(64, 64, 2, 1);
-            layer3 = make_layer(64, 128, 2, 2);
-            layer4 = make_layer(128, 256, 2, 2);
+            layer2 = make_layer(init_channels, init_channels, 2, 1);
+            layer3 = make_layer(init_channels, init_channels * 2, 2, 2);
+            layer4 = make_layer(init_channels * 2, init_channels * 4, 2, 2);
 
             register_module("layer1", layer1);
             register_module("layer2", layer2);
