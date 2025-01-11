@@ -45,10 +45,10 @@ public:
             return x;
         }
 
-        torch::nn::Conv2d conv1;
-        torch::nn::Conv2d conv2;
-        torch::nn::Linear fc1;
-        torch::nn::Linear fc2;
+        torch::nn::Conv2d conv1{nullptr};
+        torch::nn::Conv2d conv2{nullptr};
+        torch::nn::Linear fc1{nullptr};
+        torch::nn::Linear fc2{nullptr};
     };
 
 public:

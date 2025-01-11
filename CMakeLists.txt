@@ -33,8 +33,9 @@ if ( NOT TARGET lib_stack_backward )
     add_subdirectory( ${SLAM_UTILITY_PATH}/3rd_libraries/backward ${PROJECT_SOURCE_DIR}/build/lib_stack_backward )
 endif()
 
-# Create executable target to test_libtorch_cnn_mnist.
 set( IMAGE_CLASSIFICATION_PATH ${PROJECT_SOURCE_DIR}/../Image_Classification )
+
+# Create executable target to test_libtorch_cnn_mnist.
 if ( NOT TARGET lib_mnist_cnn )
     add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/single_label_classification/mnist_cnn ${PROJECT_SOURCE_DIR}/build/lib_mnist_cnn )
 endif()
@@ -54,7 +55,6 @@ target_link_libraries( test_libtorch_cnn_mnist
 )
 
 # Create executable target to test_libtorch_resnet_mnist.
-set( IMAGE_CLASSIFICATION_PATH ${PROJECT_SOURCE_DIR}/../Image_Classification )
 if ( NOT TARGET lib_mnist_resnet )
     add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/single_label_classification/mnist_resnet ${PROJECT_SOURCE_DIR}/build/lib_mnist_resnet )
 endif()
@@ -71,4 +71,23 @@ target_link_libraries( test_libtorch_resnet_mnist
 
     lib_stack_backward
     lib_mnist_resnet
+)
+
+# Create executable target to test_libtorch_mlp_mnist.
+if ( NOT TARGET lib_mnist_mlp )
+    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/single_label_classification/mnist_mlp ${PROJECT_SOURCE_DIR}/build/lib_mnist_mlp )
+endif()
+add_executable( test_libtorch_mlp_mnist
+    test/test_libtorch_mlp_mnist.cpp
+)
+target_link_libraries( test_libtorch_mlp_mnist
+    lib_slam_utility_basic_type
+    lib_slam_utility_log
+    lib_slam_utility_math
+    lib_slam_utility_memory
+    lib_slam_utility_operate
+    lib_slam_utility_tick_tock
+
+    lib_stack_backward
+    lib_mnist_mlp
 )

@@ -53,15 +53,15 @@ public:
             return out;
         }
 
-        torch::nn::Conv2d conv1;
-        torch::nn::BatchNorm2d bn1;
-        torch::nn::Conv2d conv2;
-        torch::nn::BatchNorm2d bn2;
-        torch::nn::Sequential shortcut;
+        torch::nn::Conv2d conv1{nullptr};
+        torch::nn::BatchNorm2d bn1{nullptr};
+        torch::nn::Conv2d conv2{nullptr};
+        torch::nn::BatchNorm2d bn2{nullptr};
+        torch::nn::Sequential shortcut{nullptr};
     };
 
     struct ResNet : torch::nn::Module {
-        ResNet(int32_t num_classes = 10, int32_t init_channels = 8) :
+        ResNet(int32_t num_classes = 10, int32_t init_channels = 64) :
             fc(init_channels * 4, num_classes) {
             layer1 = torch::nn::Sequential(
                 torch::nn::Conv2d(torch::nn::Conv2dOptions(/*in_channels=*/1, /*out_channels=*/init_channels, /*kernel_size=*/3)
@@ -128,7 +128,7 @@ public:
     void Test(const std::string &mnist_data_path);
 
 private:
-    std::shared_ptr<ResNet> model_ = std::make_shared<ResNet>(10);
+    std::shared_ptr<ResNet> model_ = std::make_shared<ResNet>(10, 16);
     struct Options {
         std::string output_file = "../output/mnist_resnet.pt";
         int32_t max_epoch = 5;
