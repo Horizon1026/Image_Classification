@@ -42,7 +42,7 @@ private:
     std::shared_ptr<Model> model_ = std::make_shared<Model>();
     struct Options {
         std::string output_file = "../output/mnist_mlp.pt";
-        int32_t max_epoch = 5;
+        int32_t max_epoch = 10;
         int32_t batch_size = 64;
     } options_;
 
