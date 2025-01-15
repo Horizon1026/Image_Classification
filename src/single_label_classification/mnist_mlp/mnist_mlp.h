@@ -39,7 +39,7 @@ public:
     void Test(const std::string &mnist_data_path);
 
 private:
-    std::shared_ptr<Model> model_ = std::make_shared<Model>();
+    Model model_ = Model();
     struct Options {
         std::string output_file = "../output/mnist_mlp.pt";
         int32_t max_epoch = 10;

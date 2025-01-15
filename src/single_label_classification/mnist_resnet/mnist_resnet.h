@@ -128,7 +128,7 @@ public:
     void Test(const std::string &mnist_data_path);
 
 private:
-    std::shared_ptr<ResNet> model_ = std::make_shared<ResNet>(10, 32);
+    ResNet model_ = ResNet(10, 32);
     struct Options {
         std::string output_file = "../output/mnist_resnet.pt";
         int32_t max_epoch = 8;
