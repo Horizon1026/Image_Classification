@@ -32,7 +32,7 @@ void MnistResNet::Train(const std::string &mnist_data_path) {
             // Print the loss and check point.
             if (++batch_index % 100 == 0) {
                 ReportInfo("[Train] epoch [" << epoch << "], batch_idx [" << batch_index << "], loss [" << loss.item<float>() << "].");
-                torch::save(std::make_shared<Model>(model_), options_.output_file.c_str());
+                torch::save(std::make_shared<ResNet>(model_), options_.output_file.c_str());
             }
         }
     }
