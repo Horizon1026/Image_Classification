@@ -23,18 +23,17 @@ class CnnNet(torch.nn.Module):
     def __init__(self):
         super(CnnNet, self).__init__()
         self.conv1 = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 10, kernel_size=5),
-            torch.nn.ReLU(),
-            torch.nn.MaxPool2d(kernel_size=2),
+            torch.nn.Conv2d(in_channels=1, out_channels=2, kernel_size=5),
+            torch.nn.ReLU()
         )
         self.conv2 = torch.nn.Sequential(
-            torch.nn.Conv2d(10, 20, kernel_size=5),
+            torch.nn.Conv2d(in_channels=2, out_channels=4, kernel_size=3),
             torch.nn.ReLU(),
             torch.nn.MaxPool2d(kernel_size=2),
         )
         self.fc = torch.nn.Sequential(
-            torch.nn.Linear(320, 50),
-            torch.nn.Linear(50, 10),
+            torch.nn.Linear(484, 128),
+            torch.nn.Linear(128, 10),
         )
 
     def forward(self, x):
@@ -61,7 +60,7 @@ def TrainModel(model, data_loader, max_epoch):
             loss.backward()
             optimizor.step()
 
-            if batch_idx % 200 == 0:
+            if batch_idx % 100 == 0:
                 print(">> epoch %d, batch idx %d, loss %.4f." % (epoch, batch_idx, loss.item()))
 
 def TestModel(model, data_loader):
@@ -80,7 +79,7 @@ def TestModel(model, data_loader):
 if __name__ == '__main__':
     print(torch.cuda.is_available())
     train_dataset, test_dataset = LoadDataset('/mnt/d/My_Github/Datasets/')
-    train_loader, test_loader = GenerateDataLoader(batch_size=20, train_dataset=train_dataset, test_dataset=test_dataset)
+    train_loader, test_loader = GenerateDataLoader(batch_size=64, train_dataset=train_dataset, test_dataset=test_dataset)
     model = CnnNet()
     TrainModel(model, train_loader, max_epoch=5)
     TestModel(model, test_loader)
