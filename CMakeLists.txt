@@ -37,7 +37,7 @@ set( IMAGE_CLASSIFICATION_PATH ${PROJECT_SOURCE_DIR}/../Image_Classification )
 
 # Create executable target to test_libtorch_cnn_mnist.
 if ( NOT TARGET lib_mnist_cnn )
-    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/single_label_classification/mnist_cnn ${PROJECT_SOURCE_DIR}/build/lib_mnist_cnn )
+    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/mnist_cnn ${PROJECT_SOURCE_DIR}/build/lib_mnist_cnn )
 endif()
 add_executable( test_libtorch_cnn_mnist
     test/test_libtorch_cnn_mnist.cpp
@@ -56,7 +56,7 @@ target_link_libraries( test_libtorch_cnn_mnist
 
 # Create executable target to test_libtorch_resnet_mnist.
 if ( NOT TARGET lib_mnist_resnet )
-    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/single_label_classification/mnist_resnet ${PROJECT_SOURCE_DIR}/build/lib_mnist_resnet )
+    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/mnist_resnet ${PROJECT_SOURCE_DIR}/build/lib_mnist_resnet )
 endif()
 add_executable( test_libtorch_resnet_mnist
     test/test_libtorch_resnet_mnist.cpp
@@ -75,7 +75,7 @@ target_link_libraries( test_libtorch_resnet_mnist
 
 # Create executable target to test_libtorch_mlp_mnist.
 if ( NOT TARGET lib_mnist_mlp )
-    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/single_label_classification/mnist_mlp ${PROJECT_SOURCE_DIR}/build/lib_mnist_mlp )
+    add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/mnist_mlp ${PROJECT_SOURCE_DIR}/build/lib_mnist_mlp )
 endif()
 add_executable( test_libtorch_mlp_mnist
     test/test_libtorch_mlp_mnist.cpp
