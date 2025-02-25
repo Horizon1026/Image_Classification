@@ -1,3 +1,4 @@
 /[Bb]uild/
 /.vscode/
 /output/
+/src/mnist_vit/__pycache__/
