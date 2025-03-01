@@ -1,5 +1,5 @@
 import torch
-from model import ViT
+from model_vit import ViT
 
 if __name__ == '__main__':
     model = ViT(

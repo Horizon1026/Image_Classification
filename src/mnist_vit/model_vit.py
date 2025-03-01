@@ -1,17 +1,7 @@
 import torch
+from attention import MultiHeadAttention
 
-def Pair(t):
-    return t if isinstance(t, tuple) else (t, t)
-
-class PreNorm(torch.nn.Module):
-    def __init__(self, dim, fn):
-        super().__init__()
-        self.norm = torch.nn.LayerNorm(dim)
-        self.fn = fn
-    def forward(self, x, **kwargs):
-        return self.fn(self.norm(x), **kwargs)
-
-class FeedForward(torch.nn.Module):
+class MlpHeader(torch.nn.Module):
     def __init__(self, dim, hidden_dim, dropout = 0):
         super().__init__()
         self.net = torch.nn.Sequential(
@@ -23,6 +13,14 @@ class FeedForward(torch.nn.Module):
         )
     def forward(self, x):
         return self.net(x)
+
+class PreNorm(torch.nn.Module):
+    def __init__(self, dim, fn):
+        super().__init__()
+        self.norm = torch.nn.LayerNorm(dim)
+        self.fn = fn
+    def forward(self, x, **kwargs):
+        return self.fn(self.norm(x), **kwargs)
 
 class Attention(torch.nn.Module):
     def __init__(self, dim, heads, dropout = 0):
@@ -61,13 +59,16 @@ class Transformer(torch.nn.Module):
         for _ in range(depth):
             self.layers.append(torch.nn.ModuleList([
                 PreNorm(dim, Attention(dim, heads, dropout)),
-                PreNorm(dim, FeedForward(dim, mlp_dim, dropout)),
+                PreNorm(dim, MlpHeader(dim, mlp_dim, dropout)),
             ]))
     def forward(self, x):
         for attn, ff in self.layers:
             x = attn(x) + x
             x = ff(x) + x
         return x
+
+def Pair(t):
+    return t if isinstance(t, tuple) else (t, t)
 
 class ViT(torch.nn.Module):
     def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads,
