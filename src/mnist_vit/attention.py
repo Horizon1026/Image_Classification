@@ -1,7 +1,7 @@
 import torch
 
 class MultiHeadAttention(torch.nn.Module):
-    def __init__(self, dim_embed_token, dim_single_qk, dim_single_v, num_heads, dim_out, dropout = 0):
+    def __init__(self, dim_embed_token, dim_single_qk, dim_single_v, dim_out, num_heads, dropout = 0):
         super().__init__()
         # Validate parameters.
         assert num_heads > 0, 'Num of head must be larger than 0.'
@@ -42,3 +42,48 @@ class MultiHeadAttention(torch.nn.Module):
         # Concate all self attentions.
         concated_attention = torch.cat(self_attentions, dim = -1)
         return self.to_out(concated_attention)
+
+class SelfDotProductAttention(torch.nn.Module):
+    def __init__(self, dim_embed_token, dim_single_qk, dim_single_v, dropout = 0):
+        super().__init__()
+        self.attention = MultiHeadAttention(dim_embed_token, dim_single_qk, dim_single_v, dim_single_v, num_heads = 1, dropout = dropout)
+    def forward(self, x):
+        return self.attention(x)
+
+
+if __name__ == '__main__':
+    print('>> Test attention.')
+    batch_size = 5
+    num_embed_token = 100
+    dim_embed_token = 10
+    dim_single_qk = 12
+    dim_single_v = 15
+    dim_out = 20
+    num_heads = 5
+    dropout = 0
+
+    print('>> Test multi-head attention.')
+    model = MultiHeadAttention(
+        dim_embed_token,
+        dim_single_qk,
+        dim_single_v,
+        dim_out,
+        num_heads,
+        dropout
+    )
+    input = torch.randn(batch_size, num_embed_token, dim_embed_token)
+    print(input.size())
+    output = model(input)
+    print(output.size())
+
+    print('>> Test self dot-product attention.')
+    model = SelfDotProductAttention(
+        dim_embed_token,
+        dim_single_qk,
+        dim_single_v,
+        dropout
+    )
+    input = torch.randn(batch_size, num_embed_token, dim_embed_token)
+    print(input.size())
+    output = model(input)
+    print(output.size())
