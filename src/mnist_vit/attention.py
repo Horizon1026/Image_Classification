@@ -1,7 +1,7 @@
 import torch
 
 class MultiHeadAttention(torch.nn.Module):
-    def __init__(self, dim_embed_token, dim_single_qk, dim_single_v, dim_out, num_heads, dropout = 0):
+    def __init__(self, dim_token, dim_single_qk, dim_single_v, dim_out, num_heads, dropout = 0):
         super().__init__()
         # Validate parameters.
         assert num_heads > 0, 'Num of head must be larger than 0.'
@@ -14,7 +14,7 @@ class MultiHeadAttention(torch.nn.Module):
         self.qk_scale = dim_single_qk ** -0.5
         self.softmax = torch.nn.Softmax(dim = -1) # Do normalization of each col.
         # Use only one MLP to obtain q, k, v of all heads.
-        self.to_qkv = torch.nn.Linear(dim_embed_token, self.dim_single_head * num_heads, bias = False)
+        self.to_qkv = torch.nn.Linear(dim_token, self.dim_single_head * num_heads, bias = False)
         # If num_heads == 1, this will be scaled dot-product self attention.
         self.to_out = torch.nn.Sequential(
             torch.nn.Linear(dim_single_v * num_heads, dim_out),
@@ -22,7 +22,7 @@ class MultiHeadAttention(torch.nn.Module):
         ) if num_heads != 1 else torch.nn.Identity()
 
     def forward(self, x):
-        # x = [ batch_size, num_embed_tokens, dim_embed_token ]
+        # x = [ batch_size, num_embed_tokens, dim_token ]
         # all_qkv = [ q1 k1 v1 | q2 k2 v2 | ... | qn kn vn ]
         all_qkv = self.to_qkv(x)
         # self_attentions = [ attention 1 | attention 2 | ... | attention n ]
@@ -44,9 +44,9 @@ class MultiHeadAttention(torch.nn.Module):
         return self.to_out(concated_attention)
 
 class SelfDotProductAttention(torch.nn.Module):
-    def __init__(self, dim_embed_token, dim_single_qk, dim_single_v, dropout = 0):
+    def __init__(self, dim_token, dim_single_qk, dim_single_v, dropout = 0):
         super().__init__()
-        self.attention = MultiHeadAttention(dim_embed_token, dim_single_qk, dim_single_v, dim_single_v, num_heads = 1, dropout = dropout)
+        self.attention = MultiHeadAttention(dim_token, dim_single_qk, dim_single_v, dim_single_v, num_heads = 1, dropout = dropout)
     def forward(self, x):
         return self.attention(x)
 
@@ -54,8 +54,8 @@ class SelfDotProductAttention(torch.nn.Module):
 if __name__ == '__main__':
     print('>> Test attention.')
     batch_size = 5
-    num_embed_token = 100
-    dim_embed_token = 10
+    num_token = 100
+    dim_token = 10
     dim_single_qk = 12
     dim_single_v = 15
     dim_out = 20
@@ -64,26 +64,26 @@ if __name__ == '__main__':
 
     print('>> Test multi-head attention.')
     model = MultiHeadAttention(
-        dim_embed_token,
+        dim_token,
         dim_single_qk,
         dim_single_v,
         dim_out,
         num_heads,
         dropout
     )
-    input = torch.randn(batch_size, num_embed_token, dim_embed_token)
+    input = torch.randn(batch_size, num_token, dim_token)
     print(input.size())
     output = model(input)
     print(output.size())
 
     print('>> Test self dot-product attention.')
     model = SelfDotProductAttention(
-        dim_embed_token,
+        dim_token,
         dim_single_qk,
         dim_single_v,
         dropout
     )
-    input = torch.randn(batch_size, num_embed_token, dim_embed_token)
+    input = torch.randn(batch_size, num_token, dim_token)
     print(input.size())
     output = model(input)
     print(output.size())

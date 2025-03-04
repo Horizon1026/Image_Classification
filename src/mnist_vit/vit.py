@@ -1,67 +1,78 @@
 import torch
 from transformer import Transformer
 
-def Pair(t):
-    return t if isinstance(t, tuple) else (t, t)
-
-class ViT(torch.nn.Module):
-    def __init__(self, *, image_size, patch_size, num_classes, dim, depth, heads,
-                 mlp_dim, pool = 'cls', channels = 3, dropout = 0, emb_dropout = 0):
+class VitModule(torch.nn.Module):
+    def __init__(self, image_size, patch_size, dim_token,
+                 dim_hidden_layer, num_heads, num_layers, num_classes, dropout = 0):
         super().__init__()
-        image_height, image_width = Pair(image_size)
-        patch_height, patch_width = Pair(patch_size)
-        assert image_height % patch_height == 0 and image_width % patch_width == 0, \
-            'Image dimensions must be divisible by the patch size.'
+        assert len(image_size) == 3, 'Image size must be list of [channels, rows, cols]'
+        assert len(patch_size) == 2, 'Patch size must be list of [rows, cols]'
+        image_channels, image_rows, image_cols = image_size
+        patch_rows, patch_cols = patch_size
+        num_tokens = (image_rows // patch_rows) * (image_cols // patch_cols)
 
-        num_patches = (image_height // patch_height) * (image_width // patch_width)
-        patch_dim = channels * patch_height * patch_width
-        assert pool in {'cls', 'mean'}, 'Pool type must be either cls token or mean pooling.'
-
-        self.to_patch_embedding = torch.nn.Sequential(
-            torch.nn.Conv2d(channels, dim, kernel_size=patch_height, stride=patch_height),
+        self.patch_embedding = torch.nn.Conv2d(
+            in_channels = image_channels,
+            out_channels = dim_token,
+            kernel_size = [patch_rows, patch_cols],
+            stride = [patch_rows, patch_cols],
+            padding = 0,
         )
-        self.pos_embedding = torch.nn.Parameter(torch.randn(1, num_patches + 1, dim))
-        self.cls_token = torch.nn.Parameter(torch.randn(1, 1, dim))
-        self.dropout = torch.nn.Dropout(emb_dropout)
+        self.pos_embedding = torch.nn.Parameter(torch.randn(1, num_tokens, dim_token))
+        self.embedding_dropout = torch.nn.Dropout(dropout)
         self.transformer = Transformer(
-            dim_embed_token = dim,
-            dim_hidden_layer = mlp_dim,
-            num_heads = heads,
-            num_layers = depth,
-            dropout = dropout)
-        self.pool = pool
-        self.to_latent = torch.nn.Identity()
+            dim_token = dim_token,
+            dim_hidden_layer = dim_hidden_layer,
+            num_heads = num_heads,
+            num_layers = num_layers,
+            dropout = dropout,
+        )
         self.mlp_head = torch.nn.Sequential(
-            torch.nn.LayerNorm(dim),
-            torch.nn.Linear(dim, num_classes),
+            torch.nn.LayerNorm(dim_token),
+            torch.nn.Linear(dim_token, num_classes),
         )
 
-    def forward(self, img):
-        x = self.to_patch_embedding(img).flatten(2).transpose(1, 2)
-        _, n, _ = x.shape
-        cls_tokens = self.cls_token.expand(x.shape[0], -1, -1)
-        x = torch.cat((cls_tokens, x), dim=1)
-        x += self.pos_embedding[:, :(n + 1)]
-        x = self.dropout(x)
+    def forward(self, x):
+        batch_size = x.size(0)
+        # Embedding layer.
+        # x = [batch_size, image_channels, image_rows, image_cols]
+        x = self.patch_embedding(x)
+        # x = [batch_size, dim_token, sqrt(num_tokens), sqrt(num_tokens)]
+        x = x.flatten(2).transpose(-1, -2)
+        # x = [batch_size, num_tokens, dim_token]
+        for i in range(batch_size):
+            # x = (x)[batch_size, num_tokens, dim_token] + (pos)[1, num_tokens, dim_token]
+            x[i] = x[i] + self.pos_embedding
+        x = self.embedding_dropout(x)
+
+        # Transformer layer.
         x = self.transformer(x)
-        x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
-        x = self.to_latent(x)
+        # x = [batch_size, num_tokens, dim_token]
+        x = x.mean(dim = 1)
+        # x = [batch_size, dim_token]
+
+        # MLP header.
         x = self.mlp_head(x)
+        # x = [batch_size, num_classes]
         return x
 
 
 if __name__ == '__main__':
-    model = ViT(
-        image_size=224,
-        patch_size=16,
-        num_classes=1000,
-        dim=768,
-        depth=6,
-        heads=8,
-        mlp_dim=768 * 4,
-        dropout=0.1,
-        emb_dropout=0.1
+    batch_size = 100
+    image_size = [1, 28, 28]
+    patch_size = [8, 8]
+
+    model = VitModule(
+        image_size = image_size,
+        patch_size = patch_size,
+        dim_token = image_size[0] * patch_size[0] * patch_size[1],
+        dim_hidden_layer = 256,
+        num_heads = 3,
+        num_layers = 5,
+        num_classes = 10,
+        dropout = 0,
     )
-    img = torch.randn(1, 3, 224, 224)
-    preds = model(img)
-    print(preds.size())
+    input = torch.randn(batch_size, image_size[0], image_size[1], image_size[2])
+    print(input.size())
+    output = model(input)
+    print(output.size())
