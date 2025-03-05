@@ -1,5 +1,5 @@
 import torch
-from transformer import Transformer
+from transformer import TransformerEncoder
 
 class VitModule(torch.nn.Module):
     def __init__(self, image_size, patch_size, dim_token,
@@ -20,13 +20,15 @@ class VitModule(torch.nn.Module):
         )
         self.pos_embedding = torch.nn.Parameter(torch.randn(1, num_tokens, dim_token))
         self.embedding_dropout = torch.nn.Dropout(dropout)
-        self.transformer = Transformer(
-            dim_token = dim_token,
-            dim_hidden_layer = dim_hidden_layer,
-            num_heads = num_heads,
-            num_layers = num_layers,
-            dropout = dropout,
-        )
+        self.transformer_encoders = torch.nn.ModuleList([
+            TransformerEncoder(
+                dim_token = dim_token,
+                dim_hidden_layer = dim_hidden_layer,
+                num_heads = num_heads,
+                dropout = dropout
+            )
+            for _ in range(num_layers)
+        ])
         self.mlp_head = torch.nn.Sequential(
             torch.nn.LayerNorm(dim_token),
             torch.nn.Linear(dim_token, num_classes),
@@ -46,7 +48,8 @@ class VitModule(torch.nn.Module):
         x = self.embedding_dropout(x)
 
         # Transformer layer.
-        x = self.transformer(x)
+        for layer in self.transformer_encoders:
+            x = layer(x)
         # x = [batch_size, num_tokens, dim_token]
         x = x.mean(dim = 1)
         # x = [batch_size, dim_token]

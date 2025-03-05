@@ -45,23 +45,6 @@ class TransformerEncoder(torch.nn.Module):
         x = self.feed_forward(x) + x
         return x
 
-class Transformer(torch.nn.Module):
-    def __init__(self, dim_token, dim_hidden_layer, num_heads, num_layers, dropout = 0):
-        super().__init__()
-        self.layers = torch.nn.ModuleList([
-            TransformerEncoder(
-                dim_token = dim_token,
-                dim_hidden_layer = dim_hidden_layer,
-                num_heads = num_heads,
-                dropout = dropout
-            )
-            for _ in range(num_layers)
-        ])
-    def forward(self, x):
-        for layer in self.layers:
-            x = layer(x)
-        return x
-
 
 if __name__ == '__main__':
     print('>> Test transformer.')
@@ -79,19 +62,6 @@ if __name__ == '__main__':
         dim_token = dim_token,
         dim_hidden_layer = 32,
         num_heads = num_heads,
-        dropout = dropout
-    )
-    input = torch.randn(batch_size, num_embed_token, dim_token)
-    print(input.size())
-    output = model(input)
-    print(output.size())
-
-    print('>> Test transformer encoder with multi layers.')
-    model = Transformer(
-        dim_token = dim_token,
-        dim_hidden_layer = 32,
-        num_heads = num_heads,
-        num_layers = 6,
         dropout = dropout
     )
     input = torch.randn(batch_size, num_embed_token, dim_token)

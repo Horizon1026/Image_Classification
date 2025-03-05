@@ -53,13 +53,13 @@ if __name__ == '__main__':
     train_loader, test_loader = GenerateDataLoader(batch_size=64, train_dataset=train_dataset, test_dataset=test_dataset)
 
     image_size = [1, 28, 28]
-    patch_size = [14, 14]
+    patch_size = [28, 28]
     model = VitModule(
         image_size = image_size,
         patch_size = patch_size,
         dim_token = image_size[0] * patch_size[0] * patch_size[1],
         dim_hidden_layer = 144,
-        num_heads = 1,
+        num_heads = 4,
         num_layers = 6,
         num_classes = 10,
         dropout = 0,
