@@ -61,7 +61,7 @@ public:
     };
 
     struct ResNet : torch::nn::Module {
-        ResNet(int32_t num_classes = 10, int32_t init_channels = 64) :
+        ResNet(int32_t num_classes = 10, int32_t init_channels = 16) :
             fc(init_channels * 4, num_classes) {
             layer1 = torch::nn::Sequential(
                 torch::nn::Conv2d(torch::nn::Conv2dOptions(/*in_channels=*/1, /*out_channels=*/init_channels, /*kernel_size=*/3)

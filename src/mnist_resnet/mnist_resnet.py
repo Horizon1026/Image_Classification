@@ -44,7 +44,7 @@ def MakeLayer(in_channels, out_channels, num_blocks, stride):
     return torch.nn.Sequential(*layers)
 
 class ResNet(torch.nn.Module):
-    def __init__(self, num_classes = 10, init_channels = 64):
+    def __init__(self, num_classes = 10, init_channels = 16):
         super().__init__()
         self.layer1 = torch.nn.Sequential(
             torch.nn.Conv2d(in_channels=1, out_channels=init_channels, kernel_size=3, stride=1, padding=1, bias=False),
@@ -103,9 +103,10 @@ def TestModel(model, data_loader):
         print(">> Accuracy on test dataset [%.2f %%]" % (accuracy * 100))
 
 if __name__ == '__main__':
+    print('>> Test ResNet model on MNIST dataset.')
     print(torch.cuda.is_available())
-    train_dataset, test_dataset = LoadDataset('/mnt/d/My_Github/Datasets/')
+    train_dataset, test_dataset = LoadDataset('./dataset/')
     train_loader, test_loader = GenerateDataLoader(batch_size=64, train_dataset=train_dataset, test_dataset=test_dataset)
     model = ResNet()
-    TrainModel(model, train_loader, max_epoch=5)
+    TrainModel(model, train_loader, max_epoch=1)
     TestModel(model, test_loader)

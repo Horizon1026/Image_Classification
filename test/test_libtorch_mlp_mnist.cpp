@@ -11,8 +11,8 @@ int main(int argc, char **argv) {
     ReportColorInfo("torch::cuda::device_count() = " << torch::cuda::device_count());
 
     NN_SLAM::MnistMlp solver;
-    solver.Train("/mnt/d/My_Github/Datasets/MNIST/raw");
-    solver.Test("/mnt/d/My_Github/Datasets/MNIST/raw");
+    solver.Train("../dataset/MNIST/raw");
+    solver.Test("../dataset/MNIST/raw");
 
     return 0;
 }

@@ -48,8 +48,9 @@ def TestModel(model, data_loader):
         print(">> Accuracy on test dataset [%.2f %%]" % (accuracy * 100))
 
 if __name__ == '__main__':
+    print('>> Test ViT model on MNIST dataset.')
     print(torch.cuda.is_available())
-    train_dataset, test_dataset = LoadDataset('/mnt/d/My_Github/Datasets/')
+    train_dataset, test_dataset = LoadDataset('./dataset/')
     train_loader, test_loader = GenerateDataLoader(batch_size=64, train_dataset=train_dataset, test_dataset=test_dataset)
 
     image_size = [1, 28, 28]
@@ -64,5 +65,5 @@ if __name__ == '__main__':
         num_classes = 10,
         dropout = 0,
     )
-    TrainModel(model, train_loader, max_epoch=5)
+    TrainModel(model, train_loader, max_epoch=1)
     TestModel(model, test_loader)
