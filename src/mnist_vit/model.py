@@ -1,9 +1,9 @@
 import torch
-from transformer import TransformerEncoder
+from mnist_vit.transformer import *
 
-class VitModule(torch.nn.Module):
+class ViTNet(torch.nn.Module):
     def __init__(self, image_size, patch_size, dim_token,
-                 dim_hidden_layer, num_heads, num_layers, num_classes, dropout = 0):
+                 dim_hidden_layer, num_heads, num_layers, num_classes, dropout = 0, use_class_token = False):
         super().__init__()
         assert len(image_size) == 3, 'Image size must be list of [channels, rows, cols]'
         assert len(patch_size) == 2, 'Patch size must be list of [rows, cols]'
@@ -18,7 +18,10 @@ class VitModule(torch.nn.Module):
             stride = [patch_rows, patch_cols],
             padding = 0,
         )
-        self.pos_embedding = torch.nn.Parameter(torch.randn(1, num_tokens, dim_token))
+        self.use_class_token = use_class_token
+        self.pos_embedding = torch.nn.Parameter(torch.randn(1,
+            num_tokens + 1 if use_class_token else num_tokens,
+            dim_token))
         self.embedding_dropout = torch.nn.Dropout(dropout)
         self.transformer_encoders = torch.nn.ModuleList([
             TransformerEncoder(
@@ -41,6 +44,9 @@ class VitModule(torch.nn.Module):
         x = self.patch_embedding(x)
         # x = [batch_size, dim_token, sqrt(num_tokens), sqrt(num_tokens)]
         x = x.flatten(2).transpose(-1, -2)
+        if self.use_class_token:
+            class_token = torch.zeros(batch_size, 1, x[0].size(-1), device = x.device)
+            x = torch.cat([class_token, x], dim = 1)
         # x = [batch_size, num_tokens, dim_token]
         for i in range(batch_size):
             # x = (x)[batch_size, num_tokens, dim_token] + (pos)[1, num_tokens, dim_token]
@@ -51,7 +57,7 @@ class VitModule(torch.nn.Module):
         for layer in self.transformer_encoders:
             x = layer(x)
         # x = [batch_size, num_tokens, dim_token]
-        x = x.mean(dim = 1)
+        x = x[:, 0] if self.use_class_token else x.mean(dim = 1)
         # x = [batch_size, dim_token]
 
         # MLP header.
@@ -65,7 +71,7 @@ if __name__ == '__main__':
     image_size = [1, 28, 28]
     patch_size = [8, 8]
 
-    model = VitModule(
+    model = ViTNet(
         image_size = image_size,
         patch_size = patch_size,
         dim_token = image_size[0] * patch_size[0] * patch_size[1],
