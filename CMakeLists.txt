@@ -9,34 +9,34 @@ set( CMAKE_CXX_STANDARD 20 )
 
 # Add all relative components of slam utility.
 set( SLAM_UTILITY_PATH ${PROJECT_SOURCE_DIR}/../Slam_Utility )
-if ( NOT TARGET lib_slam_utility_basic_type )
+if( NOT TARGET lib_slam_utility_basic_type )
     add_subdirectory( ${SLAM_UTILITY_PATH}/src/basic_type ${PROJECT_SOURCE_DIR}/build/lib_slam_utility_basic_type )
 endif()
-if ( NOT TARGET lib_slam_utility_log )
+if( NOT TARGET lib_slam_utility_log )
     add_subdirectory( ${SLAM_UTILITY_PATH}/src/log ${PROJECT_SOURCE_DIR}/build/lib_slam_utility_log )
 endif()
-if ( NOT TARGET lib_slam_utility_math )
+if( NOT TARGET lib_slam_utility_math )
     add_subdirectory( ${SLAM_UTILITY_PATH}/src/math ${PROJECT_SOURCE_DIR}/build/lib_slam_utility_math )
 endif()
-if ( NOT TARGET lib_slam_utility_memory )
+if( NOT TARGET lib_slam_utility_memory )
     add_subdirectory( ${SLAM_UTILITY_PATH}/src/memory ${PROJECT_SOURCE_DIR}/build/lib_slam_utility_memory )
 endif()
-if ( NOT TARGET lib_slam_utility_operate )
+if( NOT TARGET lib_slam_utility_operate )
     add_subdirectory( ${SLAM_UTILITY_PATH}/src/operate ${PROJECT_SOURCE_DIR}/build/lib_slam_utility_operate )
 endif()
-if ( NOT TARGET lib_slam_utility_tick_tock )
+if( NOT TARGET lib_slam_utility_tick_tock )
     add_subdirectory( ${SLAM_UTILITY_PATH}/src/tick_tock ${PROJECT_SOURCE_DIR}/build/lib_slam_utility_tick_tock )
 endif()
 
 # Add stack backward.
-if ( NOT TARGET lib_stack_backward )
+if( NOT TARGET lib_stack_backward )
     add_subdirectory( ${SLAM_UTILITY_PATH}/3rd_libraries/backward ${PROJECT_SOURCE_DIR}/build/lib_stack_backward )
 endif()
 
 set( IMAGE_CLASSIFICATION_PATH ${PROJECT_SOURCE_DIR}/../Image_Classification )
 
 # Create executable target to test_libtorch_cnn_mnist.
-if ( NOT TARGET lib_mnist_cnn )
+if( NOT TARGET lib_mnist_cnn )
     add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/mnist_cnn ${PROJECT_SOURCE_DIR}/build/lib_mnist_cnn )
 endif()
 add_executable( test_libtorch_cnn_mnist
@@ -55,7 +55,7 @@ target_link_libraries( test_libtorch_cnn_mnist
 )
 
 # Create executable target to test_libtorch_resnet_mnist.
-if ( NOT TARGET lib_mnist_resnet )
+if( NOT TARGET lib_mnist_resnet )
     add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/mnist_resnet ${PROJECT_SOURCE_DIR}/build/lib_mnist_resnet )
 endif()
 add_executable( test_libtorch_resnet_mnist
@@ -74,7 +74,7 @@ target_link_libraries( test_libtorch_resnet_mnist
 )
 
 # Create executable target to test_libtorch_mlp_mnist.
-if ( NOT TARGET lib_mnist_mlp )
+if( NOT TARGET lib_mnist_mlp )
     add_subdirectory( ${IMAGE_CLASSIFICATION_PATH}/src/mnist_mlp ${PROJECT_SOURCE_DIR}/build/lib_mnist_mlp )
 endif()
 add_executable( test_libtorch_mlp_mnist
