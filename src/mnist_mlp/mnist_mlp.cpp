@@ -15,7 +15,7 @@ void MnistMlp::Train(const std::string &mnist_data_path) {
     for (int32_t epoch = 0; epoch < options_.max_epoch; ++epoch) {
         int32_t batch_index = 0;
 
-        for (auto &batch : *data_loader) {
+        for (auto &batch: *data_loader) {
             // Move data and target to selected device.
             auto data = batch.data.to(device);
             auto target = batch.target.to(device);
@@ -50,7 +50,7 @@ void MnistMlp::Test(const std::string &mnist_data_path) {
 
     float average_loss = 0.0;
     int32_t correct_cnt = 0;
-    for (auto &batch : *data_loader) {
+    for (auto &batch: *data_loader) {
         // Move data and target to selected device.
         auto data = batch.data.to(device);
         auto target = batch.target.to(device);
