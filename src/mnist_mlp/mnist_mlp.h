@@ -11,10 +11,8 @@ namespace nn_slam {
 class MnistMlp {
 
 public:
-    struct Model : torch::nn::Module {
-        Model()
-            : fc1(28 * 28, 512)
-            , fc2(512, 10) {
+    struct Model: torch::nn::Module {
+        Model(): fc1(28 * 28, 512), fc2(512, 10) {
             register_module("fc1", fc1);
             register_module("fc2", fc2);
         }
