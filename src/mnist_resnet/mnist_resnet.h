@@ -2,9 +2,9 @@
 #define _MNIST_RESNET_H_
 
 #include "basic_type.h"
-#include "slam_log_reporter.h"
-#include "memory"
 #include "libtorch.h"
+#include "memory"
+#include "slam_log_reporter.h"
 
 namespace NN_SLAM {
 
@@ -15,21 +15,19 @@ public:
     // Input size: patch_size x N x M x in_planes.
     // Output size: patch_size x N x M x planes.
     struct ResNetBlock : torch::nn::Module {
-        ResNetBlock(int32_t in_planes, int32_t planes, int32_t stride = 1) :
-            conv1(torch::nn::Conv2dOptions(in_planes, planes, 3).stride(stride).padding(1).bias(false)),
-            bn1(planes),
-            conv2(torch::nn::Conv2dOptions(planes, planes, 3).stride(1).padding(1).bias(false)),
-            bn2(planes) {
+        ResNetBlock(int32_t in_planes, int32_t planes, int32_t stride = 1)
+            : conv1(torch::nn::Conv2dOptions(in_planes, planes, 3).stride(stride).padding(1).bias(false))
+            , bn1(planes)
+            , conv2(torch::nn::Conv2dOptions(planes, planes, 3).stride(1).padding(1).bias(false))
+            , bn2(planes) {
             register_module("conv1", conv1);
             register_module("bn1", bn1);
             register_module("conv2", conv2);
             register_module("bn2", bn2);
 
             if (stride != 1 || in_planes != planes) {
-                shortcut = torch::nn::Sequential(
-                    torch::nn::Conv2d(torch::nn::Conv2dOptions(in_planes, planes, 1).stride(stride).bias(false)),
-                    torch::nn::BatchNorm2d(planes)
-                );
+                shortcut = torch::nn::Sequential(torch::nn::Conv2d(torch::nn::Conv2dOptions(in_planes, planes, 1).stride(stride).bias(false)),
+                                                 torch::nn::BatchNorm2d(planes));
             } else {
                 shortcut = torch::nn::Sequential();
             }
@@ -53,25 +51,23 @@ public:
             return out;
         }
 
-        torch::nn::Conv2d conv1{nullptr};
-        torch::nn::BatchNorm2d bn1{nullptr};
-        torch::nn::Conv2d conv2{nullptr};
-        torch::nn::BatchNorm2d bn2{nullptr};
-        torch::nn::Sequential shortcut{nullptr};
+        torch::nn::Conv2d conv1 {nullptr};
+        torch::nn::BatchNorm2d bn1 {nullptr};
+        torch::nn::Conv2d conv2 {nullptr};
+        torch::nn::BatchNorm2d bn2 {nullptr};
+        torch::nn::Sequential shortcut {nullptr};
     };
 
     struct ResNet : torch::nn::Module {
-        ResNet(int32_t num_classes = 10, int32_t init_channels = 16) :
-            fc(init_channels * 4, num_classes) {
+        ResNet(int32_t num_classes = 10, int32_t init_channels = 16)
+            : fc(init_channels * 4, num_classes) {
             layer1 = torch::nn::Sequential(
-                torch::nn::Conv2d(torch::nn::Conv2dOptions(/*in_channels=*/1, /*out_channels=*/init_channels, /*kernel_size=*/3)
-                    .stride(1).padding(1).bias(false)),
-                torch::nn::BatchNorm2d(init_channels),
-                torch::nn::ReLU(),
+                torch::nn::Conv2d(
+                    torch::nn::Conv2dOptions(/*in_channels=*/1, /*out_channels=*/init_channels, /*kernel_size=*/3).stride(1).padding(1).bias(false)),
+                torch::nn::BatchNorm2d(init_channels), torch::nn::ReLU(),
                 // Parameters of MaxPool2d: kernel_size, stride, padding.
                 // If stride is not specified, it is set to kernel_size.
-                torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2).padding(1))
-            );
+                torch::nn::MaxPool2d(torch::nn::MaxPool2dOptions(3).stride(2).padding(1)));
             layer2 = make_layer(init_channels, init_channels, 2, 1);
             layer3 = make_layer(init_channels, init_channels * 2, 2, 2);
             layer4 = make_layer(init_channels * 2, init_channels * 4, 2, 2);
@@ -134,9 +130,8 @@ private:
         int32_t max_epoch = 8;
         int32_t batch_size = 64;
     } options_;
-
 };
 
-}
+}  // namespace NN_SLAM
 
-#endif // end of _MNIST_RESNET_H_
+#endif  // end of _MNIST_RESNET_H_

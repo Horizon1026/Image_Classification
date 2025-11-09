@@ -1,6 +1,6 @@
 #include "basic_type.h"
-#include "slam_log_reporter.h"
 #include "mnist_cnn.h"
+#include "slam_log_reporter.h"
 
 #include "enable_stack_backward.h"
 

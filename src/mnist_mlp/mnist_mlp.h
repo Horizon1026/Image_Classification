@@ -2,8 +2,8 @@
 #define _MNIST_MLP_H_
 
 #include "basic_type.h"
-#include "memory"
 #include "libtorch.h"
+#include "memory"
 
 namespace NN_SLAM {
 
@@ -12,9 +12,9 @@ class MnistMlp {
 
 public:
     struct Model : torch::nn::Module {
-        Model() :
-            fc1(28 * 28, 512),
-            fc2(512, 10) {
+        Model()
+            : fc1(28 * 28, 512)
+            , fc2(512, 10) {
             register_module("fc1", fc1);
             register_module("fc2", fc2);
         }
@@ -27,8 +27,8 @@ public:
             return x;
         }
 
-        torch::nn::Linear fc1{nullptr};
-        torch::nn::Linear fc2{nullptr};
+        torch::nn::Linear fc1 {nullptr};
+        torch::nn::Linear fc2 {nullptr};
     };
 
 public:
@@ -45,9 +45,8 @@ private:
         int32_t max_epoch = 10;
         int32_t batch_size = 64;
     } options_;
-
 };
 
-}
+}  // namespace NN_SLAM
 
-#endif // end of _MNIST_MLP_H_
+#endif  // end of _MNIST_MLP_H_
