@@ -6,7 +6,7 @@
 #include "memory"
 #include "slam_log_reporter.h"
 
-namespace NN_SLAM {
+namespace nn_slam {
 
 /* Class MnistResNet Declaration. */
 class MnistResNet {
@@ -132,6 +132,6 @@ private:
     } options_;
 };
 
-}  // namespace NN_SLAM
+}  // namespace nn_slam
 
 #endif  // end of _MNIST_RESNET_H_

@@ -1,7 +1,7 @@
 #include "mnist_resnet.h"
 #include "slam_log_reporter.h"
 
-namespace NN_SLAM {
+namespace nn_slam {
 
 void MnistResNet::Train(const std::string &mnist_data_path) {
     auto data_loader =
@@ -67,4 +67,4 @@ void MnistResNet::Test(const std::string &mnist_data_path) {
     ReportInfo("[Test] average loss [" << average_loss << "], correct rate [" << corr_rate << "], correct cnt [" << correct_cnt << "/" << dataset_size << "]");
 }
 
-}  // namespace NN_SLAM
+}  // namespace nn_slam

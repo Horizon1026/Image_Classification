@@ -5,7 +5,7 @@
 #include "libtorch.h"
 #include "memory"
 
-namespace NN_SLAM {
+namespace nn_slam {
 
 /* Class MnistMlp Declaration. */
 class MnistMlp {
@@ -47,6 +47,6 @@ private:
     } options_;
 };
 
-}  // namespace NN_SLAM
+}  // namespace nn_slam
 
 #endif  // end of _MNIST_MLP_H_
