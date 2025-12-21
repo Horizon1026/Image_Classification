@@ -38,31 +38,42 @@ class ViTNet(torch.nn.Module):
         )
 
     def forward(self, x):
+        # x: [batch_size, 1, 28, 28]
         batch_size = x.size(0)
-        # Embedding layer.
-        # x = [batch_size, image_channels, image_rows, image_cols]
+
+        # 1. Embedding layer. (For example, patch_size = [8, 8])
+        # self.patch_embedding: Conv2d(1, dim_token, 8, 8) -> [batch_size, dim_token, 3, 3]
         x = self.patch_embedding(x)
-        # x = [batch_size, dim_token, sqrt(num_tokens), sqrt(num_tokens)]
+
+        # Flatten and Transpose: [batch_size, dim_token, 9] -> [batch_size, 9, dim_token]
+        # (num_tokens = 3 * 3 = 9)
         x = x.flatten(2).transpose(-1, -2)
+
         if self.use_class_token:
+            # class_token: [batch_size, 1, dim_token]
             class_token = torch.zeros(batch_size, 1, x[0].size(-1), device = x.device)
+            # x: [batch_size, 10, dim_token]
             x = torch.cat([class_token, x], dim = 1)
-        # x = [batch_size, num_tokens, dim_token]
+
+        # Add Position Embedding:
+        # x: [batch_size, 9, dim_token] (or [batch_size, 10, dim_token] if use_class_token)
         for i in range(batch_size):
-            # x = (x)[batch_size, num_tokens, dim_token] + (pos)[1, num_tokens, dim_token]
             x[i] = x[i] + self.pos_embedding
         x = self.embedding_dropout(x)
 
-        # Transformer layer.
+        # 2. Transformer layer.
         for layer in self.transformer_encoders:
+            # x: [batch_size, num_tokens(+1), dim_token]
             x = layer(x)
-        # x = [batch_size, num_tokens, dim_token]
-        x = x[:, 0] if self.use_class_token else x.mean(dim = 1)
-        # x = [batch_size, dim_token]
 
-        # MLP header.
+        # Pooling:
+        # If use_class_token: pick first token -> [batch_size, dim_token]
+        # Else: mean pooling over tokens -> [batch_size, dim_token]
+        x = x[:, 0] if self.use_class_token else x.mean(dim = 1)
+
+        # 3. MLP head.
+        # self.mlp_head: [batch_size, num_classes]
         x = self.mlp_head(x)
-        # x = [batch_size, num_classes]
         return x
 
 

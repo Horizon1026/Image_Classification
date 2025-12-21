@@ -3,13 +3,7 @@ if [ ! -d "./output" ]; then
     mkdir output
 fi
 
-python3 ./src/train_mlp.py
-python3 ./src/train_cnn.py
-python3 ./src/train_resnet.py
-python3 ./src/train_vit.py
-
-cd ./build
-./test_libtorch_mlp_mnist
-./test_libtorch_cnn_mnist
-./test_libtorch_resnet_mnist
-cd ..
+python3 ./src/mnist_mlp/train_and_test.py
+python3 ./src/mnist_cnn/train_and_test.py
+python3 ./src/mnist_resnet/train_and_test.py
+python3 ./src/mnist_vit/train_and_test.py
