@@ -1,6 +1,8 @@
 /[Bb]uild/
+/[Oo]utput/
 /.vscode/
-/output/
+/.cache/
+
 /src/__pycache__/
 /src/mnist_mlp/__pycache__/
 /src/mnist_cnn/__pycache__/
