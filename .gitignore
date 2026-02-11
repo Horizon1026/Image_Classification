@@ -1,10 +1,5 @@
-/[Bb]uild/
-/[Oo]utput/
-/.vscode/
-/.cache/
-
-/src/__pycache__/
-/src/mnist_mlp/__pycache__/
-/src/mnist_cnn/__pycache__/
-/src/mnist_resnet/__pycache__/
-/src/mnist_vit/__pycache__/
+[Bb]uild
+[Oo]utput
+.vscode
+.cache
+__pycache__
