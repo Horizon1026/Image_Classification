@@ -1,5 +1,5 @@
 import torch
-from mnist_vit.attention import *
+from .attention import *
 
 class FeedForward(torch.nn.Module):
     def __init__(self, dim_token, dim_hidden_layer, dim_out, dropout = 0):

@@ -1,6 +1,5 @@
 import torch
 
-
 # Define MLP model.
 class MlpNet(torch.nn.Module):
     def __init__(self, image_size, dim_hidden_layer, num_classes):
@@ -11,7 +10,6 @@ class MlpNet(torch.nn.Module):
             torch.nn.Linear(image_channels * image_rows * image_cols, dim_hidden_layer),
             torch.nn.ReLU(),
             torch.nn.Linear(dim_hidden_layer, num_classes),
-            torch.nn.LogSoftmax(dim=1),
         )
 
     def forward(self, x):

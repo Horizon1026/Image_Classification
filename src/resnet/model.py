@@ -1,6 +1,5 @@
 import torch
 
-
 # Define ResNet model.
 class ResNetBlock(torch.nn.Module):
     def __init__(self, in_channels, out_channels, stride = 1):
@@ -65,5 +64,4 @@ class ResNet(torch.nn.Module):
         x = x.reshape(B, -1)
         # self.fc: Linear(64, num_classes) -> [B, num_classes]
         x = self.fc(x)
-        x = torch.nn.LogSoftmax(dim=1)(x)
         return x

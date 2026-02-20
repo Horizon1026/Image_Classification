@@ -1,5 +1,5 @@
 import torch
-from mnist_vit.transformer import *
+from .transformer import *
 
 class ViTNet(torch.nn.Module):
     def __init__(self, image_size, patch_size, dim_token,

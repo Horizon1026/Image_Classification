@@ -1,6 +1,5 @@
 import torch
 
-
 # Define CNN model.
 class CnnNet(torch.nn.Module):
     def __init__(self, in_channels, num_classes):
