@@ -21,7 +21,7 @@ from trainer.base_trainer import BaseTrainer
 from datasets.mnist_dataset import MnistDataset
 from visualizors.classification_visualizor import ClassificationVisualizor
 
-# Define hybrid loss for segmentation.
+# Define label loss for classification.
 class LabelLoss():
     def __call__(self, predictions, targets):
         """
@@ -35,7 +35,7 @@ class LabelLoss():
 # Main function.
 def main():
     # Parse arguments.
-    parser = argparse.ArgumentParser(description="Type of model to train on segementation dataset.")
+    parser = argparse.ArgumentParser(description="Type of model to train on classification dataset.")
     parser.add_argument("--model", type=str, default="mlp", choices=["cnn", "mlp", "resnet", "vit"],
                         help="Choose model architecture: [cnn, mlp, resnet, vit]")
     parser.add_argument("--dataset_dir", type=str, default="/media/horizon/Database/robotic_datasets/visual_learning",
