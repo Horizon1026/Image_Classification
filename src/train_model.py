@@ -20,17 +20,7 @@ from vit.model import ViTNet
 from trainer.base_trainer import BaseTrainer
 from datasets.mnist_dataset import MnistDataset
 from visualizors.classification_visualizor import ClassificationVisualizor
-
-# Define label loss for classification.
-class LabelLoss():
-    def __call__(self, predictions, targets):
-        """
-        targets shape: (B, 1)
-        predictions shape: (B, 10) (Linear layer direct output)
-        """
-        # CrossEntropyLoss expects (B, C) for predictions and (B) long for targets.
-        targets = targets.long().squeeze(1)
-        return torch.nn.CrossEntropyLoss()(predictions, targets)
+from criterions.classification_criterion import CrossEntropyLoss
 
 # Main function.
 def main():
@@ -104,7 +94,7 @@ def main():
     print(f"[INFO] Number of model parameters: {num_of_params} Bytes.")
 
     # Setup Loss.
-    criterion = LabelLoss()
+    criterion = CrossEntropyLoss()
     # Setup Optimizer.
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
     # Setup Visualizor.
