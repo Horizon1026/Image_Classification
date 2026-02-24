@@ -21,6 +21,7 @@ from trainer.base_trainer import BaseTrainer
 from datasets.mnist_dataset import MnistDataset
 from visualizors.classification_visualizor import ClassificationVisualizor
 from criterions.classification_criterion import CrossEntropyLoss
+from metrics.classification_metrics import F1Metric
 
 # Main function.
 def main():
@@ -92,7 +93,8 @@ def main():
         )
     num_of_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"[INFO] Number of model parameters: {num_of_params} Bytes.")
-
+    # Setup metric.
+    metric = F1Metric()
     # Setup Loss.
     criterion = CrossEntropyLoss()
     # Setup Optimizer.
@@ -105,6 +107,7 @@ def main():
         criterion=criterion,
         optimizer=optimizer,
         device=device,
+        metric=metric,
         visualizor=visualizor,
         output_dir=os.path.join(repo_dir, "output/"),
     )
