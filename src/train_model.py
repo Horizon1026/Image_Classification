@@ -92,7 +92,7 @@ def main():
             use_class_token = True,
         )
     num_of_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"[INFO] Number of model parameters: {num_of_params} Bytes.")
+    print(f"[INFO] Number of model parameters: {num_of_params / 1e6} M.")
     # Setup metric.
     metric = F1Metric()
     # Setup Loss.
