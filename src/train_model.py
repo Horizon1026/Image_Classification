@@ -39,6 +39,9 @@ def main():
                         help="Path to pretrained model.")
     parser.add_argument("--batch_size", type=int, default=10, help="Batch size per GPU.")
     parser.add_argument("--enable_distributed", action="store_true", help="Enable distributed training.")
+    parser.add_argument("--use_amp", action="store_true", help="Use Automatic Mixed Precision (AMP).")
+    parser.add_argument("--amp_dtype", type=str, default="float16", choices=["float16", "bfloat16", "float8_e4m3fn", "float8_e5m2"],
+                        help="Data type for AMP: [float16, bfloat16, float8_e4m3fn, float8_e5m2]")
     args = parser.parse_args()
 
     # Setup distributed training using DDPHandler.
@@ -119,7 +122,8 @@ def main():
         device=device,
         metric=metric,
         visualizor=visualizor,
-        use_amp=True,
+        use_amp=args.use_amp,
+        amp_dtype=args.amp_dtype,
         output_dir=os.path.join(repo_dir, "output/"),
     )
     # Start Training.
