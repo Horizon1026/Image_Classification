@@ -44,7 +44,7 @@ def main():
     # Setup distributed training using DDPHandler.
     handler = DDPHandler()
     if args.enable_distributed:
-        handler.init_process_group()
+        handler.init_process_group(force_distributed=True)
     
     device = handler.get_device()
     world_size = handler.get_world_size()
