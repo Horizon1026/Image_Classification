@@ -40,12 +40,12 @@ def main():
     parser.add_argument("--batch_size", type=int, default=10, help="Batch size per GPU.")
     parser.add_argument("--enable_distributed", action="store_true", help="Enable distributed training.")
     args = parser.parse_args()
-    
+
     # Setup distributed training using DDPHandler.
     handler = DDPHandler()
     if args.enable_distributed:
         handler.init_process_group(force_distributed=True)
-    
+
     device = handler.get_device()
     world_size = handler.get_world_size()
 
@@ -65,14 +65,13 @@ def main():
         image_shape = [1, 28, 28]
         train_dataset = MnistDataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
         test_dataset = MnistDataset(args.dataset_dir, phase="test", augmentor=test_augmentor)
-        
+
         # Setup Distributed Sampler if needed.
         train_sampler = DistributedSampler(train_dataset) if handler.is_distributed else None
         test_sampler = DistributedSampler(test_dataset, shuffle=False) if handler.is_distributed else None
-        
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None), 
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
                                   num_workers=4, pin_memory=True, sampler=train_sampler)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, 
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
                                  num_workers=4, pin_memory=True, sampler=test_sampler)
 
     # Setup Model.
@@ -99,11 +98,11 @@ def main():
             dropout = 0,
             use_class_token = True,
         )
-    
+
     if handler.is_main_process():
         num_of_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
         print(f"[INFO] Number of model parameters: {num_of_params / 1e6} M.")
-    
+
     # Setup metric.
     metric = F1Metric()
     # Setup Loss.
@@ -127,7 +126,6 @@ def main():
     if handler.is_main_process():
         print(f"[INFO] Starting training loop using Perception Utility framework.")
     trainer.train(args.max_epochs, train_loader, test_loader, pretrained_model_path=args.pretrained_model_path)
-
     # Cleanup.
     handler.cleanup()
 
