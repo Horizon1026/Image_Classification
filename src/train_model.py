@@ -2,7 +2,7 @@ import os
 import sys
 import torch
 import argparse
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, DistributedSampler
 
 # Define paths. Add Perception_Utility to path.
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -17,6 +17,7 @@ from mlp.model import MlpNet
 from resnet.model import ResNet
 from vit.model import ViTNet
 # Import modules from Perception_Utility.
+from devices.ddp_devices import DDPHandler
 from trainer.base_trainer import BaseTrainer
 from datasets.mnist_dataset import MnistDataset
 from visualizors.classification_visualizor import ClassificationVisualizor
@@ -36,12 +37,22 @@ def main():
     parser.add_argument("--max_epochs", type=int, default=100, help="Maximum number of epochs to train.")
     parser.add_argument("--pretrained_model_path", type=str, default=os.path.join(repo_dir, "output/final_model.pth"),
                         help="Path to pretrained model.")
+    parser.add_argument("--batch_size", type=int, default=10, help="Batch size per GPU.")
+    parser.add_argument("--enable_distributed", action="store_true", help="Enable distributed training.")
     args = parser.parse_args()
-    print(f"\033[93m[INFO] Test training model {args.model} on {args.dataset_name} dataset.\033[0m")
+    
+    # Setup distributed training using DDPHandler.
+    handler = DDPHandler()
+    if args.enable_distributed:
+        handler.init_process_group()
+    
+    device = handler.get_device()
+    world_size = handler.get_world_size()
 
-    # Setup device.
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"[INFO] Training will be performed on {device}.")
+    if handler.is_main_process():
+        print(f"\033[93m[INFO] Test training model {args.model} on {args.dataset_name} dataset.\033[0m")
+        print(f"[INFO] Training will be performed on {device}. Enable distributed training: {handler.is_distributed}")
+
     # Setup Augmentor.
     train_augmentor = None
     test_augmentor = None
@@ -54,31 +65,28 @@ def main():
         image_shape = [1, 28, 28]
         train_dataset = MnistDataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
         test_dataset = MnistDataset(args.dataset_dir, phase="test", augmentor=test_augmentor)
-        train_loader = DataLoader(train_dataset, batch_size=10, shuffle=True)
-        test_loader = DataLoader(test_dataset, batch_size=10, shuffle=False)
+        
+        # Setup Distributed Sampler if needed.
+        train_sampler = DistributedSampler(train_dataset) if handler.is_distributed else None
+        test_sampler = DistributedSampler(test_dataset, shuffle=False) if handler.is_distributed else None
+        
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None), 
+                                  num_workers=4, pin_memory=True, sampler=train_sampler)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, 
+                                 num_workers=4, pin_memory=True, sampler=test_sampler)
 
     # Setup Model.
     if args.model == "cnn":
-        print("[INFO] Model: CNN.")
-        model = CnnNet(
-            in_channels=image_shape[0],
-            num_classes=num_of_labels
-        )
+        if handler.is_main_process(): print("[INFO] Model: CNN.")
+        model = CnnNet(in_channels=image_shape[0], num_classes=num_of_labels)
     elif args.model == "mlp":
-        print("[INFO] Model: MLP.")
-        model = MlpNet(
-            image_size = image_shape,
-            dim_hidden_layer = 128,
-            num_classes = num_of_labels
-        )
+        if handler.is_main_process(): print("[INFO] Model: MLP.")
+        model = MlpNet(image_size=image_shape, dim_hidden_layer=128, num_classes=num_of_labels)
     elif args.model == "resnet":
-        print("[INFO] Model: ResNet.")
-        model = ResNet(
-            in_channels=image_shape[0],
-            num_classes=num_of_labels
-        )
+        if handler.is_main_process(): print("[INFO] Model: ResNet.")
+        model = ResNet(in_channels=image_shape[0], num_classes=num_of_labels)
     elif args.model == "vit":
-        print("[INFO] Model: ViT.")
+        if handler.is_main_process(): print("[INFO] Model: ViT.")
         patch_size = [8, 8]
         model = ViTNet(
             image_size = image_shape,
@@ -91,16 +99,19 @@ def main():
             dropout = 0,
             use_class_token = True,
         )
-    num_of_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"[INFO] Number of model parameters: {num_of_params / 1e6} M.")
+    
+    if handler.is_main_process():
+        num_of_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"[INFO] Number of model parameters: {num_of_params / 1e6} M.")
+    
     # Setup metric.
     metric = F1Metric()
     # Setup Loss.
     criterion = CrossEntropyLoss()
     # Setup Optimizer.
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01 * world_size, momentum=0.9, weight_decay=1e-4) # Scaling lr by world_size.
     # Setup Visualizor.
-    visualizor = ClassificationVisualizor()
+    visualizor = ClassificationVisualizor() if handler.is_main_process() else None
     # Setup Trainer.
     trainer = BaseTrainer(
         model=model,
@@ -109,11 +120,16 @@ def main():
         device=device,
         metric=metric,
         visualizor=visualizor,
+        use_amp=True,
         output_dir=os.path.join(repo_dir, "output/"),
     )
     # Start Training.
-    print(f"[INFO] Starting training loop using Perception Utility framework.")
+    if handler.is_main_process():
+        print(f"[INFO] Starting training loop using Perception Utility framework.")
     trainer.train(args.max_epochs, train_loader, test_loader, pretrained_model_path=args.pretrained_model_path)
+
+    # Cleanup.
+    handler.cleanup()
 
 if __name__ == "__main__":
     main()
