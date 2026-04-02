@@ -20,6 +20,7 @@ from vit.model import ViTNet
 from devices.ddp_devices import DDPHandler
 from trainer.base_trainer import BaseTrainer
 from datasets.mnist_dataset import MnistDataset
+from datasets.cifar10_dataset import Cifar10Dataset
 from visualizors.classification_visualizor import ClassificationVisualizor
 from criterions.classification_criterion import CrossEntropyLoss
 from metrics.classification_metrics import F1Metric
@@ -32,8 +33,8 @@ def main():
                         help="Choose model architecture: [cnn, mlp, resnet, vit]")
     parser.add_argument("--dataset_dir", type=str, default="/media/horizon/Database/robotic_datasets/visual_learning",
                         help="Path to dataset directory.")
-    parser.add_argument("--dataset_name", type=str, default="mnist", choices=["mnist"],
-                        help="Choose dataset name: [mnist]")
+    parser.add_argument("--dataset_name", type=str, default="mnist", choices=["mnist", "cifar10"],
+                        help="Choose dataset name: [mnist, cifar10]")
     parser.add_argument("--max_epochs", type=int, default=100, help="Maximum number of epochs to train.")
     parser.add_argument("--pretrained_model_path", type=str, default=os.path.join(repo_dir, "output/final_model.pth"),
                         help="Path to pretrained model.")
@@ -68,19 +69,24 @@ def main():
         image_shape = [1, 28, 28]
         train_dataset = MnistDataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
         test_dataset = MnistDataset(args.dataset_dir, phase="test", augmentor=test_augmentor)
+    elif args.dataset_name == "cifar10":
+        num_of_labels = 10
+        image_shape = [3, 32, 32]
+        train_dataset = Cifar10Dataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
+        test_dataset = Cifar10Dataset(args.dataset_dir, phase="test", augmentor=test_augmentor)
 
-        # Setup Distributed Sampler if needed.
-        train_sampler = DistributedSampler(train_dataset) if handler.is_distributed else None
-        test_sampler = DistributedSampler(test_dataset, shuffle=False) if handler.is_distributed else None
-        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-                                  num_workers=4, pin_memory=True, sampler=train_sampler)
-        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
-                                 num_workers=4, pin_memory=True, sampler=test_sampler)
+    # Setup Distributed Sampler if needed.
+    train_sampler = DistributedSampler(train_dataset) if handler.is_distributed else None
+    test_sampler = DistributedSampler(test_dataset, shuffle=False) if handler.is_distributed else None
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+                              num_workers=4, pin_memory=True, sampler=train_sampler)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
+                             num_workers=4, pin_memory=True, sampler=test_sampler)
 
     # Setup Model.
     if args.model == "cnn":
         if handler.is_main_process(): print("[INFO] Model: CNN.")
-        model = CnnNet(in_channels=image_shape[0], num_classes=num_of_labels)
+        model = CnnNet(image_size=image_shape, num_classes=num_of_labels)
     elif args.model == "mlp":
         if handler.is_main_process(): print("[INFO] Model: MLP.")
         model = MlpNet(image_size=image_shape, dim_hidden_layer=128, num_classes=num_of_labels)
