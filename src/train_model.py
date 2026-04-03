@@ -38,7 +38,7 @@ def main():
     parser.add_argument("--max_epochs", type=int, default=100, help="Maximum number of epochs to train.")
     parser.add_argument("--pretrained_model_path", type=str, default=os.path.join(repo_dir, "output/final_model.pth"),
                         help="Path to pretrained model.")
-    parser.add_argument("--batch_size", type=int, default=10, help="Batch size per GPU.")
+    parser.add_argument("--batch_size", type=int, default=64, help="Batch size per GPU.")
     parser.add_argument("--enable_distributed", action="store_true", help="Enable distributed training.")
     parser.add_argument("--use_amp", action="store_true", help="Use Automatic Mixed Precision (AMP).")
     parser.add_argument("--amp_dtype", type=str, default="float16", choices=["float16", "bfloat16", "float8_e4m3fn", "float8_e5m2"],

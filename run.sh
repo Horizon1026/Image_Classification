@@ -1,9 +1,28 @@
-torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model cnn --dataset_name mnist --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
-# torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model mlp --dataset_name mnist --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
-# torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model resnet --dataset_name mnist --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
-# torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model vit --dataset_name mnist --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
+#!/bin/bash
 
-# torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model cnn --dataset_name cifar10 --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
-# torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model mlp --dataset_name cifar10 --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
-# torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model resnet --dataset_name cifar10 --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
-# torchrun --nproc_per_node=1 ./src/train_model.py --enable_distributed --use_amp --amp_dtype bfloat16 --model vit --dataset_name cifar10 --max_epochs 500 --pretrained_model_path ./output/final_model.pth --dataset_dir /media/horizon/Database/robotic_datasets/visual_learning
+# --- Configuration Section ---
+# Model architecture: cnn, mlp, resnet, vit
+MODEL="cnn"
+# Dataset name: mnist, cifar10
+DATASET="cifar10"
+# Number of training epochs.
+EPOCHS=500
+# Number of processes per node.
+NPROC=1
+# Path to pretrained model and dataset directory.
+PRETRAINED="./output/final_model.pth"
+DATASET_DIR="/media/horizon/Database/robotic_datasets/visual_learning"
+# Training options
+DIST_OPTS="--enable_distributed"
+AMP_OPTS="--use_amp --amp_dtype bfloat16"
+
+# --- Training Command ---
+echo "Starting training: Model=$MODEL, Dataset=$DATASET, Epochs=$EPOCHS"
+torchrun --nproc_per_node=$NPROC ./src/train_model.py \
+    $DIST_OPTS \
+    $AMP_OPTS \
+    --model "$MODEL" \
+    --dataset_name "$DATASET" \
+    --max_epochs $EPOCHS \
+    --pretrained_model_path "$PRETRAINED" \
+    --dataset_dir "$DATASET_DIR"

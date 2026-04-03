@@ -11,11 +11,11 @@ class CnnNet(torch.nn.Module):
         super(CnnNet, self).__init__()
         in_channels = image_size[0]
         self.conv1 = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=in_channels, out_channels=in_channels * 2, kernel_size=5),
+            torch.nn.Conv2d(in_channels=in_channels, out_channels=in_channels * 4, kernel_size=5),
             torch.nn.ReLU()
         )
         self.conv2 = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=in_channels * 2, out_channels=in_channels * 4, kernel_size=3),
+            torch.nn.Conv2d(in_channels=in_channels * 4, out_channels=in_channels * 8, kernel_size=3),
             torch.nn.ReLU(),
             torch.nn.MaxPool2d(kernel_size=2),
         )
