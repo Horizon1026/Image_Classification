@@ -21,6 +21,8 @@ from devices.ddp_devices import DDPHandler
 from trainer.base_trainer import BaseTrainer
 from datasets.mnist_dataset import MnistDataset
 from datasets.cifar10_dataset import Cifar10Dataset
+from augmentors.base_augmentor import BaseAugmentor
+from augmentors.image_augmentor import GeneralImageSegmentationAugmentor
 from visualizors.classification_visualizor import ClassificationVisualizor
 from criterions.classification_criterion import CrossEntropyLoss
 from metrics.classification_metrics import F1Metric
@@ -57,9 +59,6 @@ def main():
         print(f"\033[93m[INFO] Test training model {args.model} on {args.dataset_name} dataset.\033[0m")
         print(f"[INFO] Training will be performed on {device}. Enable distributed training: {handler.is_distributed}")
 
-    # Setup Augmentor.
-    train_augmentor = None
-    test_augmentor = None
 
     # Setup Datasets and Dataloaders.
     image_shape = []
@@ -67,13 +66,24 @@ def main():
     if args.dataset_name == "mnist":
         num_of_labels = 10
         image_shape = [1, 28, 28]
+        # Setup Augmentor.
+        train_augmentor = GeneralImageSegmentationAugmentor(flip_probility=0.5, rotate_degrees=0, scale_range=(1.0, 1.0), crop_size_hw=(28, 28))
+        test_augmentor = BaseAugmentor()
+        # Setup dataset.
         train_dataset = MnistDataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
         test_dataset = MnistDataset(args.dataset_dir, phase="test", augmentor=test_augmentor)
     elif args.dataset_name == "cifar10":
         num_of_labels = 10
         image_shape = [3, 32, 32]
+        # Setup Augmentor.
+        train_augmentor = GeneralImageSegmentationAugmentor(flip_probility=0.5, rotate_degrees=0, scale_range=(1.0, 1.0), crop_size_hw=(32, 32))
+        test_augmentor = BaseAugmentor()
+        # Setup dataset.
         train_dataset = Cifar10Dataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
         test_dataset = Cifar10Dataset(args.dataset_dir, phase="test", augmentor=test_augmentor)
+    else:
+        raise ValueError(f"[ERROR] Unknown dataset name: {args.dataset_name}.")
+        sys.exit(1)
 
     # Setup Distributed Sampler if needed.
     train_sampler = DistributedSampler(train_dataset) if handler.is_distributed else None
@@ -82,6 +92,10 @@ def main():
                               num_workers=4, pin_memory=True, sampler=train_sampler)
     test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
                              num_workers=4, pin_memory=True, sampler=test_sampler)
+    if len(train_dataset) == 0 or len(test_dataset) == 0:
+        raise ValueError("[ERROR] Train or test dataset is empty.")
+    if handler.is_main_process():
+        print(f"[INFO] Train loader size: {len(train_loader)}. Test loader size: {len(test_loader)}.")
 
     # Setup Model.
     if args.model == "cnn":
