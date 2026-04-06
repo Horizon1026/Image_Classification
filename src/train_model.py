@@ -145,6 +145,7 @@ def main():
         use_amp=args.use_amp,
         amp_dtype=args.amp_dtype,
         output_dir=os.path.join(repo_dir, "output/"),
+        class_names=train_dataset.default_label_names
     )
     # Start Training.
     if handler.is_main_process():
