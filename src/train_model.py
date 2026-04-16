@@ -67,7 +67,7 @@ def main():
         num_of_labels = 10
         image_shape = [1, 28, 28]
         # Setup Augmentor.
-        train_augmentor = GeneralImageSegmentationAugmentor(flip_probility=0.5, rotate_degrees=0, scale_range=(1.0, 1.0), crop_size_hw=(28, 28))
+        train_augmentor = BaseAugmentor()
         test_augmentor = BaseAugmentor()
         # Setup dataset.
         train_dataset = MnistDataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
@@ -76,7 +76,7 @@ def main():
         num_of_labels = 10
         image_shape = [3, 32, 32]
         # Setup Augmentor.
-        train_augmentor = GeneralImageSegmentationAugmentor(flip_probility=0.5, rotate_degrees=0, scale_range=(1.0, 1.0), crop_size_hw=(32, 32))
+        train_augmentor = BaseAugmentor()
         test_augmentor = BaseAugmentor()
         # Setup dataset.
         train_dataset = Cifar10Dataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
