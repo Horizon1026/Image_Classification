@@ -4,7 +4,7 @@
 # Model architecture: cnn, mlp, resnet, vit
 MODEL="cnn"
 # Dataset name: mnist, cifar10
-DATASET="mnist"
+DATASET="cifar10"
 # Number of training epochs.
 EPOCHS=500
 # Number of processes per node.

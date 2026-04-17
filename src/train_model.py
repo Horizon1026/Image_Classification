@@ -22,7 +22,7 @@ from trainer.base_trainer import BaseTrainer
 from datasets.mnist_dataset import MnistDataset
 from datasets.cifar10_dataset import Cifar10Dataset
 from augmentors.base_augmentor import BaseAugmentor
-from augmentors.image_augmentor import GeneralImageSegmentationAugmentor
+from augmentors.image_augmentor import GeneralImageClassificationAugmentor
 from visualizors.classification_visualizor import ClassificationVisualizor
 from criterions.classification_criterion import CrossEntropyLoss
 from metrics.classification_metrics import F1Metric
@@ -67,7 +67,7 @@ def main():
         num_of_labels = 10
         image_shape = [1, 28, 28]
         # Setup Augmentor.
-        train_augmentor = BaseAugmentor()
+        train_augmentor = GeneralImageClassificationAugmentor(flip_probility=0, rotate_degrees=0, scale_range=(1, 1), crop_size_hw=(28, 28))
         test_augmentor = BaseAugmentor()
         # Setup dataset.
         train_dataset = MnistDataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
@@ -76,7 +76,7 @@ def main():
         num_of_labels = 10
         image_shape = [3, 32, 32]
         # Setup Augmentor.
-        train_augmentor = BaseAugmentor()
+        train_augmentor = GeneralImageClassificationAugmentor(flip_probility=0.5, rotate_degrees=5, scale_range=(1, 1), crop_size_hw=(32, 32))
         test_augmentor = BaseAugmentor()
         # Setup dataset.
         train_dataset = Cifar10Dataset(args.dataset_dir, phase="train", augmentor=train_augmentor)
