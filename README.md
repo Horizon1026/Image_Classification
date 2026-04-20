@@ -8,11 +8,18 @@ Some image classifier.
 - [x] Mnist - ViT.
 
 # Dependence (C++)
-- libtorch (in Slam_Utility/3rd_libraries)
+
+### 项目仓库依赖（源码在 repo 中）
 - Slam_Utility
 
+### 第三方仓库依赖
+- libtorch（需下载后放至 `Slam_Utility/3rd_libraries/libtorch`，官网：https://pytorch.org）
+- Eigen3 (>= 3.3.7)（`sudo apt install libeigen3-dev`）
+
 # Dependence (python)
-- pytorch
+
+### 第三方仓库依赖
+- pytorch（`pip install torch torchvision`）
 
 # Compile and Run
 - 第三方仓库的话需要自行 apt-get install 安装
