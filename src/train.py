@@ -57,21 +57,23 @@ def parse_args():
     parser.add_argument("--max-train-samples", type=int, default=None)
     # Limit validation to a separate fixed, seeded subset.
     parser.add_argument("--max-val-samples", type=int, default=None)
-    # Store TensorBoard events in this directory when visualization is enabled.
-    parser.add_argument("--log-dir", type=Path, default=Path("output/tensorboard"))
     # Log training scalars after this many batches or the refresh interval.
     parser.add_argument("--scalar-log-interval", type=int, default=20)
     # Log training previews after this many batches or the refresh interval.
     parser.add_argument("--image-log-interval", type=int, default=500)
     # Cap the number of samples shown in each preview image.
     parser.add_argument("--preview-images", type=int, default=8)
-    # Set page polling, time-based logging, and TensorBoard flush intervals.
+    # Set page polling and time-based logging intervals.
     parser.add_argument("--refresh-seconds", type=float, default=2.0)
     # Bind the local dashboard to this port, or use 0 for a temporary port.
     parser.add_argument("--dashboard-port", type=int, default=DEFAULT_DASHBOARD_PORT)
-    # Disable the live page while keeping TensorBoard logging.
+    # Disable the live page while keeping the binary log.
     parser.add_argument("--no-live-dashboard", action="store_true")
-    # Disable all scalar, image, TensorBoard, and live-page visualization.
+    # Store the binary log of the desktop viewer in this file when visualization is enabled.
+    parser.add_argument("--binlog", type=Path, default=Path("output/train.binlog"))
+    # Disable the binary log file while keeping the other visualization targets.
+    parser.add_argument("--no-binlog", action="store_true")
+    # Disable both binary logging and the live page.
     parser.add_argument("--no-visualization", action="store_true")
 
     # Parse the supplied command-line values into an argument namespace.
@@ -177,14 +179,15 @@ def main():
             raise FileNotFoundError(args.checkpoint)
         trainer.load_checkpoint(args.checkpoint)
         print(f"[ImageClassification] Resumed from {args.checkpoint} at epoch {trainer.next_epoch}", flush=True)
-    # Attach scalar logging and task-aware image previews after resume.
-    if not args.no_visualization:
+    # Attach binary logging and task-aware image previews after resume.
+    if not args.no_visualization and (not args.no_binlog or not args.no_live_dashboard):
         preview = ClassificationPreview(train_dataset.classes, mean, std, args.preview_images)
         trainer.visualizer = build_training_visualizer(
-            args.log_dir,
+            None if args.no_binlog else args.binlog,
+            step_metric_names=trainer.task.step_metric_names,
+            epoch_metric_names=trainer.task.epoch_metric_names,
             preview=preview,
             metric_display=METRIC_DISPLAY,
-            purge_step=trainer.global_step + 1,
             refresh_seconds=args.refresh_seconds,
             scalar_interval=args.scalar_log_interval,
             image_interval=args.image_log_interval,
