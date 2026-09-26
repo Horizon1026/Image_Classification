@@ -1,28 +1,9 @@
-#!/bin/bash
+#!/bin/sh
+set -eu
 
-# --- Configuration Section ---
-# Model architecture: cnn, mlp, resnet, vit
-MODEL="cnn"
-# Dataset name: mnist, cifar10
-DATASET="cifar10"
-# Number of training epochs.
-EPOCHS=500
-# Number of processes per node.
-NPROC=1
-# Path to pretrained model and dataset directory.
-PRETRAINED="./output/final_model.pth"
-DATASET_DIR="/media/horizon/Database/robotic_datasets/visual_learning"
-# Training options
-DIST_OPTS="--enable_distributed"
-AMP_OPTS="--use_amp --amp_dtype bfloat16"
-
-# --- Training Command ---
-echo "Starting training: Model=$MODEL, Dataset=$DATASET, Epochs=$EPOCHS"
-torchrun --nproc_per_node=$NPROC ./src/train_model.py \
-    $DIST_OPTS \
-    $AMP_OPTS \
-    --model "$MODEL" \
-    --dataset_name "$DATASET" \
-    --max_epochs $EPOCHS \
-    --pretrained_model_path "$PRETRAINED" \
-    --dataset_dir "$DATASET_DIR"
+# Resolve both source trees from the script location.
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export PYTHONPATH="$SCRIPT_DIR/src:$SCRIPT_DIR/../Perception_Utility/src${PYTHONPATH:+:$PYTHONPATH}"
+cd "$SCRIPT_DIR"
+# Launch the experiment with the selected Python environment.
+exec "${PYTHON_BIN:-python3}" src/train.py "$@"
