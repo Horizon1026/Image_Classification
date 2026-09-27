@@ -17,7 +17,7 @@ Short smoke run:
 ./run.sh --epochs 2 --max-train-samples 64 --max-val-samples 32 --batch-size 16 --num-workers 0 --resume
 ```
 
-`--epochs` is the total number of epochs, including completed epochs when resuming. Set `PYTHON_BIN` to an environment's Python path if needed.
+`--epochs` is the total number of epochs, including completed epochs when resuming. The default PyTorch `CosineAnnealingLR` schedule lowers the learning rate from its initial value to zero over 100 epochs. Use `--cosine-t-max` to set the cycle length and `--min-learning-rate` to set its floor, or `--scheduler none` to keep the rate constant. For a short run, use `--cosine-t-max 4`; keep this value the same when resuming. Scheduler progress and configuration are stored in the checkpoint and restored by `--resume`. A checkpoint written with StepLR cannot resume under cosine annealing; start a new run for the new schedule. Set `PYTHON_BIN` to an environment's Python path if needed.
 
 From `Workspace/scripts`, the same experiment can be started with `sh run_test.sh Image_Classification` or `./run_test.sh Image_Classification`. Extra arguments are passed through, for example `--epochs 1 --max-train-samples 64`.
 

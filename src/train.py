@@ -41,6 +41,12 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=128)
     # Set the initial AdamW rate, which a resumed optimizer will override.
     parser.add_argument("--learning-rate", type=float, default=1e-3)
+    # Select cosine annealing or keep the learning rate constant.
+    parser.add_argument("--scheduler", choices=["none", "cosine"], default="cosine")
+    # Set the cosine half-cycle length in completed epochs.
+    parser.add_argument("--cosine-t-max", type=int, default=100)
+    # Set the learning-rate floor reached at the end of the cosine cycle.
+    parser.add_argument("--min-learning-rate", type=float, default=0.0)
     # Set the number of data-loading worker processes per loader.
     parser.add_argument("--num-workers", type=int, default=4)
     # Set how many training batches share one optimizer update.
@@ -124,9 +130,16 @@ def report_configuration(args, train_dataset, val_dataset, train_loader, val_loa
         f"{prefix}   model: {type(model).__name__}",
         f"{prefix}   parameters: {total_parameters:,} total / {trainable_parameters:,} trainable",
         f"{prefix}   optimizer: {type(optimizer).__name__}",
+        f"{prefix}   scheduler: {type(trainer.scheduler).__name__ if trainer.scheduler is not None else 'None'}",
         f"{prefix}   active_learning_rate: {optimizer.param_groups[0]['lr']}",
         f"{prefix}   next_epoch: {trainer.next_epoch + 1}",
     ])
+    # Report effective scheduler settings, which a checkpoint may override.
+    if trainer.scheduler is not None:
+        lines.extend([
+            f"{prefix}   active_cosine_t_max: {trainer.scheduler.T_max}",
+            f"{prefix}   active_min_learning_rate: {trainer.scheduler.eta_min}",
+        ])
     print("\n".join(lines), flush=True)
 
 
@@ -134,6 +147,11 @@ def report_configuration(args, train_dataset, val_dataset, train_loader, val_loa
 def main():
     # Seed the experiment and resolve its requested device.
     args = parse_args()
+    # Reject invalid schedule settings before loading the dataset.
+    if args.scheduler == "cosine" and (
+        args.cosine_t_max < 1 or not 0 <= args.min_learning_rate <= args.learning_rate
+    ):
+        raise ValueError("cosine annealing requires a positive T_max and a learning-rate floor within [0, initial rate]")
     seed_everything(args.seed)
     device = get_valid_device(args.device)
 
@@ -169,9 +187,16 @@ def main():
     # Construct the model, optimizer, and reusable trainer.
     model = CifarCNN(num_classes=len(train_dataset.classes))
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
+    # Create the requested native PyTorch schedule before checkpoint recovery.
+    scheduler = (
+        torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=args.cosine_t_max, eta_min=args.min_learning_rate,
+        )
+        if args.scheduler == "cosine" else None
+    )
     trainer = Trainer(
         model, ClassificationTask(num_classes=len(train_dataset.classes)),
-        optimizer, device, args.accumulation_steps,
+        optimizer, device, args.accumulation_steps, scheduler=scheduler,
     )
     # Restore full training state when continuation is requested.
     if args.resume:
