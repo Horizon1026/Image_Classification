@@ -29,7 +29,7 @@ Training starts a local dashboard at `http://127.0.0.1:8765/` and prints its URL
 
 Use `--refresh-seconds` to change the page polling and time-based logging interval. The page is available while training runs. Curves and previews are saved to `output/train.binlog` by default; open this file with the sibling `Binary_Data_Viewer` application after training.
 
-Use `--binlog` to choose another file and `--no-binlog` for a live-page-only run. Use `--no-live-dashboard` to write only the binary log. `--scalar-log-interval`, `--image-log-interval`, and `--preview-images` adjust event frequency and preview size. `--no-visualization` disables both outputs. Every run creates a new binary log, so a resumed run records only its new epochs. Each scalar or image uses its training step or epoch as its horizontal coordinate.
+Use `--binlog` to choose another file and `--no-binlog` for a live-page-only run. Use `--no-live-dashboard` to write only the binary log. `--scalar-log-interval`, `--image-log-interval`, and `--preview-images` adjust event frequency and preview size. `--no-visualization` disables both outputs. Every run creates a new binary log, so a resumed run records only its new epochs. The binary log groups scalar items under `train` and `val` packages and stores previews in separate PNG packages. Its metric timestamps use global training steps; epoch summaries and validation previews land just after the last batch of their epoch.
 
 The live charts label training steps or epochs on the horizontal axis. Cross-entropy uses nats per sample; accuracy, macro precision, macro recall, and macro F1 are displayed as percentages. The underlying metric values remain fractions in the binary log.
 
