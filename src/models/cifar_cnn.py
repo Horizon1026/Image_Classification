@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from model import ClassificationOutput
 
 
 # Define a compact convolutional classifier for CIFAR images.
@@ -28,6 +29,6 @@ class CifarCNN(nn.Module):
         # Map pooled features to class logits.
         self.classifier = nn.Linear(128, num_classes)
 
-    # Convert a batch of images into class logits.
-    def forward(self, images: torch.Tensor) -> torch.Tensor:
-        return self.classifier(self.features(images).flatten(1))
+    # Wrap class logits in the shared classification output contract.
+    def forward(self, images: torch.Tensor) -> ClassificationOutput:
+        return ClassificationOutput(self.classifier(self.features(images).flatten(1)))

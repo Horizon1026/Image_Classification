@@ -1,42 +1,35 @@
 import argparse
+from dataclasses import replace
 from pathlib import Path
 
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from augmentor import ClassificationAugment, ComposeSampleTransforms, NormalizeImage
-from core import get_valid_device, seed_everything
-from data import ImageFolderDataset, classification_collate
+from augmentor import ImageClassificationAugment, ComposeSampleTransforms, NormalizeImage
+from core import resolve_torch_device, seed_global_rngs
+from data import IMAGE_FOLDER_CLASSIFICATION_DATASETS, image_classification_collate
 from engine import Trainer
-from tasks import ClassificationTask
-from visuializor import (
-    DEFAULT_DASHBOARD_PORT, ClassificationPreview, build_training_visualizer,
+from objectives import ClassificationCrossEntropyObjective
+from tasks import ImageClassificationTask
+from visualization import (
+    CLASSIFICATION_TRAINING_SCALAR_DISPLAY, DEFAULT_DASHBOARD_PORT, ImageClassificationPreview, build_training_visualizer,
 )
-from models import CifarCNN
+from models import CifarCNN, MnistCNN
 
 
-# Use the local CIFAR-10 folder unless another root is supplied.
-DEFAULT_DATA_ROOT = Path("/media/horizon/Database/robotic_datasets/visual_learning/Cifar10")
-
-# Define chart labels and display units for this classification experiment.
-METRIC_DISPLAY = {
-    "loss": {"label": "Cross-entropy loss", "unit": "nats/sample", "scale": 1},
-    "accuracy": {"label": "Accuracy", "unit": "%", "scale": 100},
-    "precision_macro": {"label": "Macro precision", "unit": "%", "scale": 100},
-    "recall_macro": {"label": "Macro recall", "unit": "%", "scale": 100},
-    "f1_macro": {"label": "Macro F1", "unit": "%", "scale": 100},
-    "learning_rate": {"label": "Learning rate", "unit": "unitless", "scale": 1},
-}
+# Model architecture is an experiment choice, separate from dataset metadata.
+MODEL_BY_DATASET = {"cifar10": CifarCNN, "mnist": MnistCNN}
 
 
 # Parse the experiment configuration from the command line.
 def parse_args():
-    # Create the command-line parser for this CIFAR-10 experiment.
-    parser = argparse.ArgumentParser(description="Train a CIFAR-10 classifier")
-    # Locate the dataset root containing train and test class folders.
-    parser.add_argument("--data-root", type=Path, default=DEFAULT_DATA_ROOT)
+    # Expose only datasets supported by a local model and shared data definition.
+    parser = argparse.ArgumentParser(description="Train an image classifier")
+    parser.add_argument("--dataset", choices=tuple(MODEL_BY_DATASET), default="cifar10")
+    # Override the selected dataset's default root.
+    parser.add_argument("--data-root", type=Path, default=None)
     # Set the total epoch count, including epochs completed before resume.
-    parser.add_argument("--epochs", type=int, default=100)
+    parser.add_argument("--epochs", type=int, default=20)
     # Set the number of samples in each training and validation batch.
     parser.add_argument("--batch-size", type=int, default=128)
     # Set the initial AdamW rate, which a resumed optimizer will override.
@@ -56,7 +49,7 @@ def parse_args():
     # Seed Python, NumPy, PyTorch, and deterministic subset selection.
     parser.add_argument("--seed", type=int, default=42)
     # Set the path used to save checkpoints and load them on resume.
-    parser.add_argument("--checkpoint", type=Path, default=Path("output/last.ckpt"))
+    parser.add_argument("--checkpoint", type=Path, default=None)
     # Restore model, optimizer, progress, and random states from a checkpoint.
     parser.add_argument("--resume", action="store_true")
     # Limit training to a fixed, seeded subset for short runs.
@@ -76,7 +69,7 @@ def parse_args():
     # Disable the live page while keeping the binary log.
     parser.add_argument("--no-live-dashboard", action="store_true")
     # Store the binary log of the desktop viewer in this file when visualization is enabled.
-    parser.add_argument("--binlog", type=Path, default=Path("output/train.binlog"))
+    parser.add_argument("--binlog", type=Path, default=None)
     # Disable the binary log file while keeping the other visualization targets.
     parser.add_argument("--no-binlog", action="store_true")
     # Disable both binary logging and the live page.
@@ -100,7 +93,7 @@ def limit_dataset(dataset, limit, seed):
 
 
 # Print every parsed option and the resolved experiment configuration.
-def report_configuration(args, train_dataset, val_dataset, train_loader, val_loader, trainer):
+def report_configuration(args, dataset_spec, train_dataset, val_dataset, train_loader, val_loader, trainer):
     prefix = "[ImageClassification]"
     lines = [f"{prefix} Configuration", f"{prefix} Command-line arguments:"]
 
@@ -119,9 +112,9 @@ def report_configuration(args, train_dataset, val_dataset, train_loader, val_loa
     lines.extend([
         f"{prefix} Resolved setup:",
         f"{prefix}   device: {trainer.device}",
-        f"{prefix}   train_split: {args.data_root / 'train'}",
+        f"{prefix}   train_split: {dataset_spec.split_path('train')}",
         f"{prefix}   train_samples: {len(train_loader.dataset):,} selected / {len(train_dataset):,} available",
-        f"{prefix}   test_split: {args.data_root / 'test'}",
+        f"{prefix}   test_split: {dataset_spec.split_path('val')}",
         f"{prefix}   test_samples: {len(val_loader.dataset):,} selected / {len(val_dataset):,} available",
         f"{prefix}   train_transforms: {train_transforms}",
         f"{prefix}   test_transforms: {test_transforms}",
@@ -143,26 +136,36 @@ def report_configuration(args, train_dataset, val_dataset, train_loader, val_loa
     print("\n".join(lines), flush=True)
 
 
-# Build and run the complete CIFAR-10 experiment.
+# Build and run the selected image classification experiment.
 def main():
-    # Seed the experiment and resolve its requested device.
     args = parse_args()
+    # Resolve the shared dataset definition and any machine-specific root override.
+    dataset_spec = IMAGE_FOLDER_CLASSIFICATION_DATASETS[args.dataset]
+    if args.data_root is not None:
+        dataset_spec = replace(dataset_spec, root=args.data_root)
+    args.data_root = dataset_spec.root
+    # Keep default checkpoints and binary logs separate across datasets.
+    if args.checkpoint is None:
+        args.checkpoint = Path("output/last.ckpt" if args.dataset == "cifar10" else f"output/{args.dataset}/last.ckpt")
+    if args.binlog is None:
+        args.binlog = Path("output/train.binlog" if args.dataset == "cifar10" else f"output/{args.dataset}/train.binlog")
     # Reject invalid schedule settings before loading the dataset.
     if args.scheduler == "cosine" and (
         args.cosine_t_max < 1 or not 0 <= args.min_learning_rate <= args.learning_rate
     ):
         raise ValueError("cosine annealing requires a positive T_max and a learning-rate floor within [0, initial rate]")
-    seed_everything(args.seed)
-    device = get_valid_device(args.device)
+    seed_global_rngs(args.seed)
+    device = resolve_torch_device(args.device)
 
-    # Compose separate sample pipelines for training and validation.
-    mean = (0.4914, 0.4822, 0.4465)
-    std = (0.2470, 0.2435, 0.2616)
-    train_transform = ComposeSampleTransforms([ClassificationAugment(), NormalizeImage(mean, std)])
+    # Apply digit-safe or CIFAR-specific augmentation before normalization.
+    mean, std = dataset_spec.mean, dataset_spec.std
+    train_operations = [ImageClassificationAugment()] if args.dataset == "cifar10" else []
+    train_transform = ComposeSampleTransforms([*train_operations, NormalizeImage(mean, std)])
     val_transform = ComposeSampleTransforms([NormalizeImage(mean, std)])
-    train_dataset = ImageFolderDataset(args.data_root / "train", transform=train_transform)
-    val_dataset = ImageFolderDataset(args.data_root / "test", transform=val_transform)
-    # Verify that both splits use the same ten labels.
+    # Build both splits through the shared dataset contract.
+    train_dataset = dataset_spec.make_dataset("train", transform=train_transform)
+    val_dataset = dataset_spec.make_dataset("val", transform=val_transform)
+    # Verify that both splits agree on all ten class labels.
     if train_dataset.class_to_idx != val_dataset.class_to_idx:
         raise ValueError("Training and test class mappings differ")
     if len(train_dataset.classes) != 10:
@@ -175,17 +178,17 @@ def main():
         shuffle=True,
         num_workers=args.num_workers,
         pin_memory=device.type == "cuda",
-        collate_fn=classification_collate,
+        collate_fn=image_classification_collate,
     )
     val_loader = DataLoader(
         limit_dataset(val_dataset, args.max_val_samples, args.seed + 1),
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         pin_memory=device.type == "cuda",
-        collate_fn=classification_collate,
+        collate_fn=image_classification_collate,
     )
     # Construct the model, optimizer, and reusable trainer.
-    model = CifarCNN(num_classes=len(train_dataset.classes))
+    model = MODEL_BY_DATASET[args.dataset](num_classes=len(train_dataset.classes))
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     # Create the requested native PyTorch schedule before checkpoint recovery.
     scheduler = (
@@ -195,7 +198,7 @@ def main():
         if args.scheduler == "cosine" else None
     )
     trainer = Trainer(
-        model, ClassificationTask(num_classes=len(train_dataset.classes)),
+        model, ImageClassificationTask(num_classes=len(train_dataset.classes), objective=ClassificationCrossEntropyObjective()),
         optimizer, device, args.accumulation_steps, scheduler=scheduler,
     )
     # Restore full training state when continuation is requested.
@@ -206,13 +209,13 @@ def main():
         print(f"[ImageClassification] Resumed from {args.checkpoint} at epoch {trainer.next_epoch}", flush=True)
     # Attach binary logging and task-aware image previews after resume.
     if not args.no_visualization and (not args.no_binlog or not args.no_live_dashboard):
-        preview = ClassificationPreview(train_dataset.classes, mean, std, args.preview_images)
+        preview = ImageClassificationPreview(train_dataset.classes, mean, std, args.preview_images)
         trainer.visualizer = build_training_visualizer(
             None if args.no_binlog else args.binlog,
             step_metric_names=trainer.task.step_metric_names,
             epoch_metric_names=trainer.task.epoch_metric_names,
             preview=preview,
-            metric_display=METRIC_DISPLAY,
+            metric_display=CLASSIFICATION_TRAINING_SCALAR_DISPLAY,
             refresh_seconds=args.refresh_seconds,
             scalar_interval=args.scalar_log_interval,
             image_interval=args.image_log_interval,
@@ -220,7 +223,7 @@ def main():
             dashboard_port=args.dashboard_port,
         )
     # Report all requested settings and resolved runtime details before training.
-    report_configuration(args, train_dataset, val_dataset, train_loader, val_loader, trainer)
+    report_configuration(args, dataset_spec, train_dataset, val_dataset, train_loader, val_loader, trainer)
     try:
         trainer.fit(train_loader, val_loader, epochs=args.epochs, checkpoint_path=args.checkpoint)
     finally:
