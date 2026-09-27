@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader, Subset
 
 from augmentor import ImageClassificationAugment, ComposeSampleTransforms, NormalizeImage
 from core import resolve_torch_device, seed_global_rngs
-from data import IMAGE_FOLDER_CLASSIFICATION_DATASETS, image_classification_collate
+from data import CIFAR10_SPEC, MNIST_SPEC, image_classification_collate
 from engine import Trainer
 from objectives import ClassificationCrossEntropyObjective
 from tasks import ImageClassificationTask
@@ -19,6 +19,7 @@ from models import CifarCNN, MnistCNN
 
 # Model architecture is an experiment choice, separate from dataset metadata.
 MODEL_BY_DATASET = {"cifar10": CifarCNN, "mnist": MnistCNN}
+DATASET_SPECS = {"cifar10": CIFAR10_SPEC, "mnist": MNIST_SPEC}
 
 
 # Parse the experiment configuration from the command line.
@@ -140,7 +141,7 @@ def report_configuration(args, dataset_spec, train_dataset, val_dataset, train_l
 def main():
     args = parse_args()
     # Resolve the shared dataset definition and any machine-specific root override.
-    dataset_spec = IMAGE_FOLDER_CLASSIFICATION_DATASETS[args.dataset]
+    dataset_spec = DATASET_SPECS[args.dataset]
     if args.data_root is not None:
         dataset_spec = replace(dataset_spec, root=args.data_root)
     args.data_root = dataset_spec.root
