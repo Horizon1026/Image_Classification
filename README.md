@@ -1,42 +1,61 @@
 # Image Classification
 
-CIFAR-10 and MNIST PNG classification examples using the sibling `Perception_Utility` framework. Their models live in `src/models/`; shared dataset definitions, data, objective, task, and training components live in `Perception_Utility/src`. The training entry point selects a shared dataset definition and pairs it with a local model.
+基于 `Perception_Utility` 的图像分类训练示例。项目分别提供 CIFAR-10 的 RGB CNN 和 MNIST PNG 的灰度图 CNN；数据集、训练接口和指标定义复用同级框架。
 
-Dependencies: Python 3.10+, PyTorch, torchvision, NumPy, Pillow, and the sibling `Binary_Data_Log/py_src` Python recorder for binary logging. `run.sh` adds that recorder to `PYTHONPATH`; no third-party logging package is needed. Dataset layouts: `Cifar10/{train,test}/{class_name}/*.png` and `MNIST/png/{training,testing}/{0..9}/*.png`.
+## Components
+
+- [x] `src/models/cifar_cnn.py`：CIFAR-10 的三通道分类模型。
+- [x] `src/models/mnist_cnn.py`：MNIST 的单通道分类模型。
+- [x] `src/train.py`：按数据集选择模型和 spec，完成增强、训练/验证、配置报告、checkpoint 恢复及余弦退火。
+- [x] 两个数据集均为 10 个参与训练的类别，没有“其他”类或忽略类；训练启动时打印原始类别到模型输出 ID 的映射表。
+- [x] 可视化：交叉熵、准确率、宏平均 precision/recall/F1，以及图像与真值/预测预览。
+
+## Dependencies
+
+### Project repositories
+
+- `Perception_Utility`：分类数据集 spec、增强、loss、指标、任务、训练器与可视化组件。
+- `Binary_Data_Log/py_src`：保存二进制日志时使用；`Binary_Data_Viewer` 可用于查看日志。
+
+以上项目需与本项目位于同级目录；`run.sh` 会将所需源码路径加入 `PYTHONPATH`。
+
+### Python packages
+
+- Python 3.10+、PyTorch、torchvision、NumPy、Pillow。
+
+### Datasets
+
+- CIFAR-10 默认根目录：`/media/horizon/Database/robotic_datasets/visual_learning/Cifar10`，目录结构为 `{train,test}/{class_name}/图片`。
+- MNIST PNG 默认根目录：`/media/horizon/Database/robotic_datasets/visual_learning/MNIST/png`，目录结构为 `{training,testing}/{0..9}/图片`。
+
+使用 `--data-root` 可覆盖所选数据集的根目录。数据集类别、通道模式和归一化统计定义在 `Perception_Utility/src/data/` 中。
+
+## Run
+
+在本项目根目录执行；默认数据集为 CIFAR-10：
 
 ```bash
-./run.sh --epochs 10
+./run.sh --dataset cifar10 --epochs 20
+./run.sh --dataset mnist --epochs 20
 ```
 
-`--dataset cifar10` is the default and uses `/media/horizon/Database/robotic_datasets/visual_learning/Cifar10`. Select the grayscale digit dataset with `--dataset mnist`; its default root is `/media/horizon/Database/robotic_datasets/visual_learning/MNIST/png`. Override either root with `--data-root`. CIFAR keeps its checkpoint and binary log defaults under `output/`; MNIST uses `output/mnist/` so runs do not share model checkpoints. CIFAR training uses padded random crop and horizontal flip; MNIST only normalizes images because horizontal flips alter digit labels. Validation only normalizes images. Both pipelines operate on complete samples, and classification labels remain unchanged.
-
-MNIST smoke run:
+如果系统默认 `python3` 没有安装所需包，可指定解释器：
 
 ```bash
-./run.sh --dataset mnist --epochs 1 --max-train-samples 64 --max-val-samples 32 --batch-size 16 --num-workers 0
+PYTHON_BIN=/path/to/python ./run.sh --dataset mnist
 ```
 
-Short smoke run:
+快速检查训练流程：
 
 ```bash
-./run.sh --epochs 1 --max-train-samples 64 --max-val-samples 32 --batch-size 16 --num-workers 0
-./run.sh --epochs 2 --max-train-samples 64 --max-val-samples 32 --batch-size 16 --num-workers 0 --resume
+./run.sh --dataset mnist --epochs 1 --batch-size 16 --num-workers 0 --max-train-samples 64 --max-val-samples 32 --no-visualization
 ```
 
-`--epochs` is the total number of epochs, including completed epochs when resuming. The default PyTorch `CosineAnnealingLR` schedule lowers the learning rate from its initial value to zero over 100 epochs. Use `--cosine-t-max` to set the cycle length and `--min-learning-rate` to set its floor, or `--scheduler none` to keep the rate constant. For a short run, use `--cosine-t-max 4`; keep this value the same when resuming. Scheduler progress and configuration are stored in the checkpoint and restored by `--resume`. A checkpoint written with StepLR cannot resume under cosine annealing; start a new run for the new schedule. Set `PYTHON_BIN` to an environment's Python path if needed.
+默认 batch size 为 128，学习率为 `1e-3`。CIFAR-10 训练使用随机裁剪与水平翻转；MNIST 只做归一化，验证集也只做归一化。
 
-From `Workspace/scripts`, the same experiment can be started with `sh run_test.sh Image_Classification` or `./run_test.sh Image_Classification`. Extra arguments are passed through, for example `--epochs 1 --max-train-samples 64`.
+## Tips
 
-Training starts a local dashboard at `http://127.0.0.1:8765/` and prints its URL in the terminal. Open the URL manually while training runs. Use `--dashboard-port` to choose another port when needed. It polls for current samples, predictions, loss, and metrics every two seconds by default:
-
-```bash
-./run.sh --refresh-seconds 2
-```
-
-Use `--refresh-seconds` to change the page polling and time-based logging interval. The page is available while training runs. Curves and previews are saved to `output/train.binlog` by default; open this file with the sibling `Binary_Data_Viewer` application after training.
-
-Use `--binlog` to choose another file and `--no-binlog` for a live-page-only run. Use `--no-live-dashboard` to write only the binary log. `--scalar-log-interval`, `--image-log-interval`, and `--preview-images` adjust event frequency and preview size. `--no-visualization` disables both outputs. Every run creates a new binary log, so a resumed run records only its new epochs. The binary log groups scalar items under `train` and `val` packages and stores previews in separate PNG packages. Its metric timestamps use global training steps; epoch summaries and validation previews land just after the last batch of their epoch.
-
-The live charts use the shared classification metric display preset from `Perception_Utility` and label training steps or epochs on the horizontal axis. Cross-entropy uses nats per sample; accuracy, macro precision, macro recall, and macro F1 are displayed as percentages. The underlying metric values remain fractions in the binary log.
-
-The live page has separate **Loss**, **Metrics**, and **Learning rate** sections. Each plot pairs Train on the left with Val on the right; an unavailable counterpart leaves an empty slot, including the Val slot for learning rate.
+- 默认启用余弦退火：`--cosine-t-max 100`、`--min-learning-rate 0`；`--scheduler none` 保持学习率不变。恢复训练时用 `--resume`，且 `--epochs` 表示包含已完成 epoch 的总数。
+- CIFAR-10 默认 checkpoint 和日志为 `output/last.ckpt`、`output/train.binlog`；MNIST 使用 `output/mnist/last.ckpt`、`output/mnist/train.binlog`。可用 `--checkpoint`、`--binlog` 改路径。
+- 实时页面默认运行在 `http://127.0.0.1:8765/`。使用 `--no-live-dashboard` 仅保存日志，`--no-binlog` 仅查看实时页面，`--no-visualization` 关闭两者。
+- `--max-train-samples` 与 `--max-val-samples` 使用固定随机种子选取子集；`--accumulation-steps` 可设置梯度累积步数。完整参数列表可运行 `./run.sh --help`。

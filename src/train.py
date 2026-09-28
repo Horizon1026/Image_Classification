@@ -9,6 +9,7 @@ from augmentor import ImageClassificationAugment, ComposeSampleTransforms, Norma
 from core import resolve_torch_device, seed_global_rngs
 from data import CIFAR10_SPEC, MNIST_SPEC, image_classification_collate
 from engine import Trainer
+from model import format_model_parameters
 from objectives import ClassificationCrossEntropyObjective
 from tasks import ImageClassificationTask
 from visualization import (
@@ -106,8 +107,6 @@ def report_configuration(args, dataset_spec, train_dataset, val_dataset, train_l
     # Report actual data, model, and optimizer state after checkpoint recovery.
     model = trainer.model
     optimizer = trainer.optimizer
-    total_parameters = sum(parameter.numel() for parameter in model.parameters())
-    trainable_parameters = sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
     train_transforms = " -> ".join(type(item).__name__ for item in train_dataset.transform.transforms)
     test_transforms = " -> ".join(type(item).__name__ for item in val_dataset.transform.transforms)
     lines.extend([
@@ -119,15 +118,16 @@ def report_configuration(args, dataset_spec, train_dataset, val_dataset, train_l
         f"{prefix}   test_samples: {len(val_loader.dataset):,} selected / {len(val_dataset):,} available",
         f"{prefix}   train_transforms: {train_transforms}",
         f"{prefix}   test_transforms: {test_transforms}",
-        f"{prefix}   classes: {train_dataset.classes}",
-        f"{prefix}   class_to_idx: {train_dataset.class_to_idx}",
         f"{prefix}   model: {type(model).__name__}",
-        f"{prefix}   parameters: {total_parameters:,} total / {trainable_parameters:,} trainable",
+        f"{prefix}   parameters: {format_model_parameters(model)}",
         f"{prefix}   optimizer: {type(optimizer).__name__}",
         f"{prefix}   scheduler: {type(trainer.scheduler).__name__ if trainer.scheduler is not None else 'None'}",
         f"{prefix}   active_learning_rate: {optimizer.param_groups[0]['lr']}",
         f"{prefix}   next_epoch: {trainer.next_epoch + 1}",
     ])
+    # Show each dataset source class beneath its model output index.
+    lines.append(f"{prefix} Label mapping:")
+    lines.extend(f"{prefix}   {row}" for row in dataset_spec.label_table_lines(train_dataset.source_class_to_idx))
     # Report effective scheduler settings, which a checkpoint may override.
     if trainer.scheduler is not None:
         lines.extend([
@@ -166,11 +166,11 @@ def main():
     # Build both splits through the shared dataset contract.
     train_dataset = dataset_spec.make_dataset("train", transform=train_transform)
     val_dataset = dataset_spec.make_dataset("val", transform=val_transform)
-    # Verify that both splits agree on all ten class labels.
-    if train_dataset.class_to_idx != val_dataset.class_to_idx:
-        raise ValueError("Training and test class mappings differ")
-    if len(train_dataset.classes) != 10:
-        raise ValueError(f"Expected 10 classes, found {len(train_dataset.classes)}")
+    # Verify that both splits use the same source folders and target classes.
+    if train_dataset.source_class_to_idx != val_dataset.source_class_to_idx:
+        raise ValueError("Training and test source class mappings differ")
+    if train_dataset.classes != dataset_spec.classes.names or val_dataset.classes != dataset_spec.classes.names:
+        raise ValueError("Dataset target classes differ from the spec")
 
     # Build independent training and evaluation loaders.
     train_loader = DataLoader(
@@ -189,7 +189,7 @@ def main():
         collate_fn=image_classification_collate,
     )
     # Construct the model, optimizer, and reusable trainer.
-    model = MODEL_BY_DATASET[args.dataset](num_classes=len(train_dataset.classes))
+    model = MODEL_BY_DATASET[args.dataset](num_classes=dataset_spec.classes.num_classes)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     # Create the requested native PyTorch schedule before checkpoint recovery.
     scheduler = (
@@ -199,7 +199,7 @@ def main():
         if args.scheduler == "cosine" else None
     )
     trainer = Trainer(
-        model, ImageClassificationTask(num_classes=len(train_dataset.classes), objective=ClassificationCrossEntropyObjective()),
+        model, ImageClassificationTask(num_classes=dataset_spec.classes.num_classes, objective=ClassificationCrossEntropyObjective()),
         optimizer, device, args.accumulation_steps, scheduler=scheduler,
     )
     # Restore full training state when continuation is requested.
@@ -210,7 +210,7 @@ def main():
         print(f"[ImageClassification] Resumed from {args.checkpoint} at epoch {trainer.next_epoch}", flush=True)
     # Attach binary logging and task-aware image previews after resume.
     if not args.no_visualization and (not args.no_binlog or not args.no_live_dashboard):
-        preview = ImageClassificationPreview(train_dataset.classes, mean, std, args.preview_images)
+        preview = ImageClassificationPreview(dataset_spec.classes.names, mean, std, args.preview_images)
         trainer.visualizer = build_training_visualizer(
             None if args.no_binlog else args.binlog,
             step_metric_names=trainer.task.step_metric_names,
