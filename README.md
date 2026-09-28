@@ -8,7 +8,7 @@
 - [x] `src/models/mnist_cnn.py`：MNIST 的单通道分类模型。
 - [x] `src/train.py`：按数据集选择模型和 spec，完成增强、训练/验证、配置报告、checkpoint 恢复及余弦退火。
 - [x] 两个数据集均为 10 个参与训练的类别，没有“其他”类或忽略类；训练启动时打印原始类别到模型输出 ID 的映射表。
-- [x] 可视化：交叉熵、准确率、宏平均 precision/recall/F1，以及图像与真值/预测预览。
+- [x] 可视化：交叉熵、准确率、宏平均 precision/recall/F1，以及图像与真值/预测预览。CIFAR-10 和 MNIST 默认记录全部 10 类的 precision/recall/F1，实时页面将这些单类曲线默认折叠，点击后展开。
 
 ## Dependencies
 

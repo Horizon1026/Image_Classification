@@ -13,7 +13,7 @@ from model import format_model_parameters
 from objectives import ClassificationCrossEntropyObjective
 from tasks import ImageClassificationTask
 from visualization import (
-    CLASSIFICATION_TRAINING_SCALAR_DISPLAY, DEFAULT_DASHBOARD_PORT, ImageClassificationPreview, build_training_visualizer,
+    DEFAULT_DASHBOARD_PORT, ImageClassificationPreview, build_training_visualizer, classification_scalar_display,
 )
 from models import CifarCNN, MnistCNN
 
@@ -198,8 +198,12 @@ def main():
         )
         if args.scheduler == "cosine" else None
     )
+    reported_classes = {class_id: dataset_spec.classes.names[class_id] for class_id in dataset_spec.reported_class_ids}
     trainer = Trainer(
-        model, ImageClassificationTask(num_classes=dataset_spec.classes.num_classes, objective=ClassificationCrossEntropyObjective()),
+        model, ImageClassificationTask(
+            num_classes=dataset_spec.classes.num_classes, objective=ClassificationCrossEntropyObjective(),
+            reported_classes=reported_classes,
+        ),
         optimizer, device, args.accumulation_steps, scheduler=scheduler,
     )
     # Restore full training state when continuation is requested.
@@ -216,7 +220,7 @@ def main():
             step_metric_names=trainer.task.step_metric_names,
             epoch_metric_names=trainer.task.epoch_metric_names,
             preview=preview,
-            metric_display=CLASSIFICATION_TRAINING_SCALAR_DISPLAY,
+            metric_display=classification_scalar_display(reported_classes),
             refresh_seconds=args.refresh_seconds,
             scalar_interval=args.scalar_log_interval,
             image_interval=args.image_log_interval,
