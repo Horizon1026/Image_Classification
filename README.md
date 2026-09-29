@@ -28,7 +28,7 @@
 - CIFAR-10 默认根目录：`/media/horizon/Database/robotic_datasets/visual_learning/Cifar10`，目录结构为 `{train,test}/{class_name}/图片`。
 - MNIST PNG 默认根目录：`/media/horizon/Database/robotic_datasets/visual_learning/MNIST/png`，目录结构为 `{training,testing}/{0..9}/图片`。
 
-使用 `--data-root` 可覆盖所选数据集的根目录。数据集类别、通道模式和归一化统计定义在 `Perception_Utility/src/data/` 中。
+使用 `--data-root` 可覆盖所选数据集的根目录。数据集类别、通道模式和归一化统计定义在 `Perception_Utility/src/data/dataset/` 中；公共根目录定义在 `Perception_Utility/src/data/specs_common.py`。
 
 ## Run
 
@@ -52,6 +52,8 @@ PYTHON_BIN=/path/to/python ./run.sh --dataset mnist
 ```
 
 默认 batch size 为 128，学习率为 `1e-3`。CIFAR-10 训练使用随机裁剪与水平翻转；MNIST 只做归一化，验证集也只做归一化。
+
+训练页面按 GPU 状态、训练/验证三列预览、总 loss、可折叠单项 loss、学习率、整体指标及可折叠逐类指标排列。每批记录 loss；验证预览在一轮结束后从原始图像和标注重建。保存的 `.binlog` 可在 `Perception_Utility` 目录用 `PYTHONPATH=src python -m visualization.replay <binlog路径>` 回放。
 
 ## Tips
 

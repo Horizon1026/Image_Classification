@@ -5,7 +5,7 @@ from pathlib import Path
 import torch
 from torch.utils.data import DataLoader, Subset
 
-from augmentor import ImageClassificationAugment, ComposeSampleTransforms, NormalizeImage
+from data.transforms import ImageClassificationAugment, ComposeSampleTransforms, NormalizeImage
 from core import resolve_torch_device, seed_global_rngs
 from data import CIFAR10_SPEC, MNIST_SPEC, image_classification_collate
 from engine import Trainer
@@ -225,7 +225,7 @@ def main():
             scalar_interval=args.scalar_log_interval,
             image_interval=args.image_log_interval,
             live_dashboard=not args.no_live_dashboard,
-            dashboard_port=args.dashboard_port,
+            dashboard_port=args.dashboard_port, device=device, epoch_offset=trainer.next_epoch,
         )
     # Report all requested settings and resolved runtime details before training.
     report_configuration(args, dataset_spec, train_dataset, val_dataset, train_loader, val_loader, trainer)
