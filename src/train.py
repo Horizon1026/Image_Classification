@@ -15,11 +15,11 @@ from tasks import ImageClassificationTask
 from visualization import (
     DEFAULT_DASHBOARD_PORT, ImageClassificationPreview, build_training_visualizer, classification_scalar_display,
 )
-from models import CifarCNN, MnistCNN
+from models import CifarCNN, MnistCNN, ResNet18Classifier
 
 
 # Model architecture is an experiment choice, separate from dataset metadata.
-MODEL_BY_DATASET = {"cifar10": CifarCNN, "mnist": MnistCNN}
+CNN_BY_DATASET = {"cifar10": CifarCNN, "mnist": MnistCNN}
 DATASET_SPECS = {"cifar10": CIFAR10_SPEC, "mnist": MNIST_SPEC}
 
 
@@ -27,7 +27,9 @@ DATASET_SPECS = {"cifar10": CIFAR10_SPEC, "mnist": MNIST_SPEC}
 def parse_args():
     # Expose only datasets supported by a local model and shared data definition.
     parser = argparse.ArgumentParser(description="Train an image classifier")
-    parser.add_argument("--dataset", choices=tuple(MODEL_BY_DATASET), default="cifar10")
+    parser.add_argument("--dataset", choices=tuple(DATASET_SPECS), default="cifar10")
+    # Select the dataset-specific CNN or a ResNet-18 configured for this input.
+    parser.add_argument("--model", choices=("cnn", "resnet18"), default="cnn")
     # Override the selected dataset's default root.
     parser.add_argument("--data-root", type=Path, default=None)
     # Set the total epoch count, including epochs completed before resume.
@@ -54,16 +56,18 @@ def parse_args():
     parser.add_argument("--checkpoint", type=Path, default=None)
     # Restore model, optimizer, progress, and random states from a checkpoint.
     parser.add_argument("--resume", action="store_true")
+    # Start a new experiment from model parameters without restoring training progress.
+    parser.add_argument("--init-weights", type=Path, default=None)
+    # Keep a new experiment's checkpoint and log in one directory.
+    parser.add_argument("--output-dir", type=Path, default=None)
     # Limit training to a fixed, seeded subset for short runs.
     parser.add_argument("--max-train-samples", type=int, default=None)
     # Limit validation to a separate fixed, seeded subset.
     parser.add_argument("--max-val-samples", type=int, default=None)
-    # Log training scalars after this many batches or the refresh interval.
-    parser.add_argument("--scalar-log-interval", type=int, default=20)
     # Log training previews after this many batches or the refresh interval.
     parser.add_argument("--image-log-interval", type=int, default=500)
     # Cap the number of samples shown in each preview image.
-    parser.add_argument("--preview-images", type=int, default=8)
+    parser.add_argument("--preview-images", type=int, default=2)
     # Set page polling and time-based logging intervals.
     parser.add_argument("--refresh-seconds", type=float, default=2.0)
     # Bind the local dashboard to this port, or use 0 for a temporary port.
@@ -145,11 +149,19 @@ def main():
     if args.data_root is not None:
         dataset_spec = replace(dataset_spec, root=args.data_root)
     args.data_root = dataset_spec.root
-    # Keep default checkpoints and binary logs separate across datasets.
+    if args.resume and args.init_weights is not None:
+        raise ValueError("--resume and --init-weights are mutually exclusive")
+    if args.output_dir is not None:
+        args.checkpoint = args.checkpoint or args.output_dir / "last.ckpt"
+        args.binlog = args.binlog or args.output_dir / "train.binlog"
+    # Keep default artifacts separate by architecture and dataset.
+    default_output = (Path("output") if args.dataset == "cifar10" else Path("output") / args.dataset)
+    if args.model == "resnet18":
+        default_output = Path("output") / "resnet18" / args.dataset
     if args.checkpoint is None:
-        args.checkpoint = Path("output/last.ckpt" if args.dataset == "cifar10" else f"output/{args.dataset}/last.ckpt")
+        args.checkpoint = default_output / "last.ckpt"
     if args.binlog is None:
-        args.binlog = Path("output/train.binlog" if args.dataset == "cifar10" else f"output/{args.dataset}/train.binlog")
+        args.binlog = default_output / "train.binlog"
     # Reject invalid schedule settings before loading the dataset.
     if args.scheduler == "cosine" and (
         args.cosine_t_max < 1 or not 0 <= args.min_learning_rate <= args.learning_rate
@@ -189,7 +201,11 @@ def main():
         collate_fn=image_classification_collate,
     )
     # Construct the model, optimizer, and reusable trainer.
-    model = MODEL_BY_DATASET[args.dataset](num_classes=dataset_spec.classes.num_classes)
+    model = (
+        CNN_BY_DATASET[args.dataset](num_classes=dataset_spec.classes.num_classes)
+        if args.model == "cnn"
+        else ResNet18Classifier(in_channels=len(dataset_spec.mean), num_classes=dataset_spec.classes.num_classes)
+    )
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     # Create the requested native PyTorch schedule before checkpoint recovery.
     scheduler = (
@@ -205,6 +221,7 @@ def main():
             reported_classes=reported_classes,
         ),
         optimizer, device, args.accumulation_steps, scheduler=scheduler,
+        class_names=dataset_spec.classes.names, task_type="classification",
     )
     # Restore full training state when continuation is requested.
     if args.resume:
@@ -212,17 +229,21 @@ def main():
             raise FileNotFoundError(args.checkpoint)
         trainer.load_checkpoint(args.checkpoint)
         print(f"[ImageClassification] Resumed from {args.checkpoint} at epoch {trainer.next_epoch}", flush=True)
+    elif args.init_weights is not None:
+        if args.init_weights.resolve() == args.checkpoint.resolve():
+            raise ValueError("--init-weights must differ from the new experiment checkpoint path")
+        trainer.load_initial_weights(args.init_weights)
+        print(f"[Training] Initialized model from {args.init_weights} as a new experiment", flush=True)
     # Attach binary logging and task-aware image previews after resume.
     if not args.no_visualization and (not args.no_binlog or not args.no_live_dashboard):
-        preview = ImageClassificationPreview(dataset_spec.classes.names, mean, std, args.preview_images)
+        preview = ImageClassificationPreview(dataset_spec.classes.names, mean, std, args.preview_images, dataset=val_dataset)
         trainer.visualizer = build_training_visualizer(
             None if args.no_binlog else args.binlog,
-            step_metric_names=trainer.task.step_metric_names,
+            loss_component_names=trainer.task.loss_component_names,
             epoch_metric_names=trainer.task.epoch_metric_names,
             preview=preview,
             metric_display=classification_scalar_display(reported_classes),
             refresh_seconds=args.refresh_seconds,
-            scalar_interval=args.scalar_log_interval,
             image_interval=args.image_log_interval,
             live_dashboard=not args.no_live_dashboard,
             dashboard_port=args.dashboard_port, device=device, epoch_offset=trainer.next_epoch,
@@ -230,7 +251,8 @@ def main():
     # Report all requested settings and resolved runtime details before training.
     report_configuration(args, dataset_spec, train_dataset, val_dataset, train_loader, val_loader, trainer)
     try:
-        trainer.fit(train_loader, val_loader, epochs=args.epochs, checkpoint_path=args.checkpoint)
+        trainer.fit(train_loader, val_loader, epochs=args.epochs, checkpoint_path=args.checkpoint,
+                    best_metric="f1_macro")
     finally:
         # Flush and close visualization files after training or failure.
         if trainer.visualizer is not None:
