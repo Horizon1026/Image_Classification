@@ -29,7 +29,7 @@
 - CIFAR-10 默认根目录：`/media/horizon/Database/robotic_datasets/visual_learning/Cifar10`，目录结构为 `{train,test}/{class_name}/图片`。
 - MNIST PNG 默认根目录：`/media/horizon/Database/robotic_datasets/visual_learning/MNIST/png`，目录结构为 `{training,testing}/{0..9}/图片`。
 
-使用 `--data-root` 可覆盖所选数据集的根目录。数据集类别、通道模式和归一化统计定义在 `Perception_Utility/src/data/dataset/` 中；公共根目录定义在 `Perception_Utility/src/data/specs_common.py`。
+使用 `--data-root` 可覆盖所选数据集的根目录。数据集类别、通道模式和归一化统计定义在 `Perception_Utility/src/data/dataset/` 中；公共根目录定义在 `Perception_Utility/src/data/paths.py`。
 
 ## Run
 
